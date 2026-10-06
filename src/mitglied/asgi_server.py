@@ -5,4 +5,4 @@ import uvicorn
 
 def run() -> None:
     """Server auf Port 8000 starten."""
-    uvicorn.run("fitness:app", host="127.0.0.1", port=8000)
+    uvicorn.run("mitglied:app", host="127.0.0.1", port=8000)
