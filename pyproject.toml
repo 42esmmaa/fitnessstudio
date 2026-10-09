@@ -1,34 +1,228 @@
+# pyproject.toml fuer den Appserver "Fitnessstudio"
+#
+# Grundlage: pyproject.toml aus dem Beispiel "patient" von Prof. Dr. J. Zimmermann
+# (Hochschule Karlsruhe), uebernommen und an folgenden Stellen bewusst geaendert:
+#   - nur Abhaengigkeiten, die das Projekt aktuell wirklich importiert
+#   - alle Abhaengigkeiten mit unterer UND oberer Versionsgrenze
+#   - exclude-newer unter [tool.uv] statt [tool.uv.pip], damit es auch fuer
+#     "uv lock" und "uv sync" gilt
+#   - keine Einstellungen fuer "extras", weil dev/lint Dependency Groups sind
+#   - [tool.fastapi] zeigt auf ein Modul, das es wirklich gibt
+#   - pytest-Konfiguration in der nativen TOML-Tabelle [tool.pytest] (ab pytest 9)
+#
+# Spezifikation: https://packaging.python.org/en/latest/specifications/pyproject-toml
+# TOML (= Tom's Obvious Minimal Language): https://toml.io
+#
+# Aufruf (PowerShell, im Projektverzeichnis):
+#   Server
+#       uv run mitglied
+#       uv run fastapi dev
+#   Tests (Server muss fuer Integrationstests laufen)
+#       uv run pytest
+#       uv run pytest -m unit
+#   Codeanalyse, Formatierung, Typpruefung
+#       uv run ruff check [--fix] src tests
+#       uv run ruff format [--check] src tests
+#       uv run ty check
+#   Abhaengigkeiten
+#       uv add <paket>              neues Paket inkl. oberer Grenze (s. add-bounds)
+#       uv add --group dev <paket>  neues Paket nur fuer die Entwicklung
+#       uv sync                     alle Gruppen installieren (s. default-groups)
+#       uv lock --upgrade           Versionen aktualisieren
+#       uv tree --outdated --depth=1
+#       uv audit                    auf bekannte Sicherheitsluecken pruefen
+
 [project]
 name = "fitnessstudio"
 version = "2026.10.1"
-description = "AppServer für ein Fitnessstudio mit FastAPI"
+description = "Appserver fuer die Mitgliederverwaltung eines Fitnessstudios mit FastAPI"
+readme = "README.md"
 authors = [
     { name = "Esma Ak", email = "akes1011@h-ka.de" },
-    { name = "Eyübhan Yörümez", email = "yoey1011@h-ka.de" }
+    { name = "Eyübhan Yörümez", email = "yoey1011@h-ka.de" },
 ]
 maintainers = [
     { name = "Esma Ak", email = "akes1011@h-ka.de" },
-    { name = "Eyübhan Yörümez", email = "yoey1011@h-ka.de" }
+    { name = "Eyübhan Yörümez", email = "yoey1011@h-ka.de" },
 ]
 requires-python = ">=3.15"
+keywords = ["Python", "FastAPI", "ASGI", "REST", "Fitnessstudio"]
+# https://pypi.org/classifiers
+classifiers = [
+    # ehrlich: das Projekt steht am Anfang
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Web Environment",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Internet :: WWW/HTTP",
+]
+# TODO Lizenz festlegen, z.B. "GPL-3.0-or-later" wie im Beispiel des Professors.
+# Dafuer muss es eine Datei LICENSE im Projektverzeichnis geben.
+# license = "GPL-3.0-or-later"
+# license-files = ["LICENSE"]
+
+# Nur Pakete, die im Quellcode unter src importiert werden.
+# Neue Pakete mit "uv add <paket>" hinzufuegen, sobald ein Feature sie braucht.
 dependencies = [
-    "fastapi>=0.115",
-    "uvicorn>=0.30",
+    # https://fastapi.tiangolo.com, bringt Starlette und Pydantic mit
+    "fastapi>=0.142.2,<1.0.0",
+    # https://www.uvicorn.dev ASGI-Server, wird in asgi_server.py gestartet
+    "uvicorn>=0.54.0,<1.0.0",
 ]
 
+[project.urls]
+repository = "https://github.com/42esmmaa/fitnessstudio"
+
 [project.scripts]
+# "uv run mitglied" ruft die Funktion main() in src/mitglied/__init__.py auf
 mitglied = "mitglied:main"
 
 [build-system]
-requires = ["uv_build>=0.8,<0.13"]
+# https://docs.astral.sh/uv/concepts/build-backend
+# obere Grenze: bei 0.x koennen sich Minor-Versionen inkompatibel aendern
+requires = ["uv_build>=0.12.20,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
+# noetig, weil Projektname (fitnessstudio) und Paketname (mitglied) verschieden sind
 module-name = "mitglied"
 
+# https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups
 [dependency-groups]
 dev = [
-    "httpx>=0.27",
-    "pytest>=8",
-    "ruff>=0.6",
+    # https://www.python-httpx.org HTTP-Client fuer Integrationstests,
+    # explizit aufgefuehrt statt sich auf fastapi[standard] zu verlassen
+    "httpx>=0.28.1,<1.0.0",
+    # https://pytest.org
+    "pytest>=9.1.1,<10.0.0",
+    # https://pytest-cov.readthedocs.io Testabdeckung (Option --cov)
+    "pytest-cov>=7.1.0,<8.0.0",
+    # https://github.com/pytest-dev/pytest-html Testbericht (Option --html)
+    "pytest-html>=4.2.0,<5.0.0",
 ]
+lint = [
+    # https://docs.astral.sh/ruff Codeanalyse und Formatierung
+    "ruff>=0.16.10,<1.0.0",
+    # https://docs.astral.sh/ty Typpruefung
+    "ty>=0.0.84,<1.0.0",
+]
+
+# ------------------------------------------------------------------------------
+# Werkzeuge
+# ------------------------------------------------------------------------------
+
+[tool.fastapi]
+# fuer "uv run fastapi dev" ohne Pfadangabe; mitglied/__init__.py exportiert "app"
+entrypoint = "mitglied:app"
+
+# https://docs.pytest.org/en/stable/reference/customize.html
+# native TOML-Tabelle ab pytest 9 (statt [tool.pytest.ini_options])
+[tool.pytest]
+minversion = "9.1"
+pythonpath = ["src"]
+testpaths = ["tests"]
+# --html erfordert pytest-html, --cov erfordert pytest-cov
+addopts = ["--html=report.html", "--cov", "--cov-report=html"]
+markers = [
+    "unit: Unit-Tests ohne laufenden Server",
+    "rest: Integrationstests fuer die REST-Schnittstelle",
+]
+
+# https://coverage.readthedocs.io/en/latest/source.html
+[tool.coverage.run]
+source = ["mitglied"]
+
+# https://docs.astral.sh/ruff/settings
+[tool.ruff]
+# neuere Regeln aktivieren; deshalb ist "--preview" beim Aufruf nicht noetig
+preview = true
+
+[tool.ruff.lint]
+# uebernommen aus dem Beispiel des Professors
+select = [
+    "YTT",   # flake8-2020
+    "ASYNC", # flake8-async
+    "S",     # flake8-bandit (Sicherheit)
+    "BLE",   # flake8-blind-except
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+    "DTZ",   # flake8-datetimez
+    "T10",   # flake8-debugger
+    "EXE",   # flake8-executable
+    "FA",    # flake8-future-annotations
+    "INT",   # flake8-gettext
+    "ISC",   # flake8-implicit-str-concat
+    "LOG",   # flake8-logging
+    "G",     # flake8-logging-format
+    "PIE",   # flake8-pie
+    "PYI",   # flake8-pyi
+    "PT",    # flake8-pytest-style
+    "RET",   # flake8-return
+    "SIM",   # flake8-simplify
+    "TC",    # flake8-type-checking
+    "PTH",   # flake8-use-pathlib
+    "FLY",   # flynt
+    "I",     # isort (Reihenfolge der Imports)
+    "N",     # pep8-naming
+    "PERF",  # Perflint
+    "E",     # pycodestyle (Fehler)
+    "W",     # pycodestyle (Warnungen)
+    "D",     # pydocstyle https://docs.astral.sh/ruff/rules/#pydocstyle-d
+    "F",     # Pyflakes
+    "PGH",   # pygrep-hooks
+    "PL",    # Pylint
+    "UP",    # pyupgrade
+    "FURB",  # refurb
+    "RUF",   # Ruff-spezifische Regeln
+    "TRY",   # tryceratops
+    "FAST",  # FastAPI
+    "FBT",   # flake8-boolean-trap
+    "A",     # flake8-builtins
+    "COM",   # flake8-commas
+    "RSE",   # flake8-raise
+    "SLF",   # flake8-self
+    "TID",   # flake8-tidy-imports
+    "ARG",   # flake8-unused-arguments
+]
+ignore = [
+    # widersprechen sich paarweise mit anderen D-Regeln
+    "incorrect-blank-line-before-class",
+    "multi-line-summary-second-line",
+    # kollidiert mit "ruff format" https://github.com/astral-sh/ruff/issues/9216
+    "missing-trailing-comma",
+    "no-self-use",
+    # UTF-8 ist Default ab Python 3.15 (PEP 686)
+    "unspecified-encoding",
+    # main() in __init__.py ist fuer "uv run mitglied" gewollt
+    "non-empty-init-module",
+]
+
+[tool.ruff.lint.isort]
+case-sensitive = true
+combine-as-imports = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["assert", "undocumented-public-function"]
+
+[tool.ruff.lint.pylint]
+max-statements-in-try = 7
+
+# ty: keine eigene Konfiguration noetig. ty erkennt ./src und .venv automatisch
+# und prueft alle Python-Dateien im Projekt, also auch ./tests, sobald es existiert.
+# https://docs.astral.sh/ty/reference/configuration
+
+# https://docs.astral.sh/uv/reference/settings
+[tool.uv]
+required-version = ">=0.12.20"
+# https://docs.astral.sh/uv/concepts/preview
+preview-features = ["add-bounds"]
+# "uv add" traegt automatisch eine obere Grenze ein, z.B. ">=2.1.4,<3.0.0"
+add-bounds = "major"
+# keine Paketversionen verwenden, die juenger als 1 Tag sind (Schutz vor
+# kompromittierten Releases); gilt hier fuer uv lock und uv sync
+exclude-newer = "1 day"
+# "uv sync" installiert auch dev und lint
+# VORSICHT: im Dockerfile "uv sync --no-default-groups" verwenden
+default-groups = "all"
