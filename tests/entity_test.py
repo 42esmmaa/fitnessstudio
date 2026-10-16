@@ -30,15 +30,33 @@ def neues_mitglied() -> Mitglied:
         geburtsdatum=date(2000, 1, 1),
         geschlecht=Geschlecht.DIVERS,
         interessen=["Krafttraining", "Yoga"],
+        id=None,
+        erzeugt=None,
+        aktualisiert=None,
         vertrag=Vertrag(
             beginn=date(2026, 10, 1),
             monatlicher_beitrag=Decimal("29.90"),
             tarif=Tarif.STUDENT,
             getraenkeflat=True,
+            id=None,
+            mitglied_id=None,
+            mitglied=None,
         ),
         zahlungen=[
-            Zahlung(betrag=Decimal("29.90"), zahlungsdatum=date(2026, 10, 1)),
-            Zahlung(betrag=Decimal("29.90"), zahlungsdatum=date(2026, 11, 1)),
+            Zahlung(
+                betrag=Decimal("29.90"),
+                zahlungsdatum=date(2026, 10, 1),
+                id=None,
+                mitglied_id=None,
+                mitglied=None,
+            ),
+            Zahlung(
+                betrag=Decimal("29.90"),
+                zahlungsdatum=date(2026, 11, 1),
+                id=None,
+                mitglied_id=None,
+                mitglied=None,
+            ),
         ],
     )
 
@@ -75,6 +93,28 @@ def test_email_eindeutig(engine) -> None:
             session.commit()
 
 
+def test_ohne_interessen(engine) -> None:
+    mitglied = Mitglied(
+        vorname="Alex",
+        nachname="Muster",
+        email="alex@example.org",
+        geburtsdatum=date(2000, 1, 1),
+        geschlecht=Geschlecht.DIVERS,
+        id=None,
+        vertrag=None,
+        zahlungen=[],
+        erzeugt=None,
+        aktualisiert=None,
+    )
+    assert mitglied.interessen is None
+    with Session(engine) as session:
+        session.add(mitglied)
+        session.commit()
+        session.expunge_all()
+        geladen = session.scalars(select(Mitglied)).one()
+        assert geladen.interessen is None
+
+
 def test_vertrag_eindeutig(engine) -> None:
     with Session(engine) as session:
         mitglied = neues_mitglied()
@@ -107,3 +147,45 @@ def test_versionsschutz(engine) -> None:
         veraltet.vorname = "Robin"
         with pytest.raises(StaleDataError):
             zweite.commit()
+
+
+def test_vergleich_anhand_der_id() -> None:
+    erstes = neues_mitglied()
+    zweites = neues_mitglied()
+    dasselbe = erstes
+    assert erstes == dasselbe
+    assert erstes != zweites
+    erstes.id = 1000
+    zweites.id = 1000
+    assert erstes == zweites
+    assert hash(erstes) == hash(zweites)
+    assert erstes != object()
+
+
+def test_set_uebernimmt_nur_fachdaten() -> None:
+    bisher = neues_mitglied()
+    geaendert = neues_mitglied()
+    geaendert.vorname = "Kim"
+    geaendert.interessen = ["Schwimmen"]
+    bisherige_id = 1000
+    bisher.id = bisherige_id
+    bisher.set(geaendert)
+    assert bisher.vorname == "Kim"
+    assert bisher.interessen == ["Schwimmen"]
+    assert bisher.id == bisherige_id
+    assert bisher.vertrag is not geaendert.vertrag
+
+
+def test_vergleich_und_ausgabe_ohne_beziehungen(engine) -> None:
+    with Session(engine) as session:
+        session.add(neues_mitglied())
+        session.commit()
+        geladen = session.scalars(select(Mitglied)).one()
+        session.expunge_all()
+
+    anderes = neues_mitglied()
+    anderes.id = geladen.id
+    assert geladen == anderes
+    assert hash(geladen) == hash(anderes)
+    assert "Mitglied(" in repr(geladen)
+    assert "Vertrag(" not in repr(geladen)

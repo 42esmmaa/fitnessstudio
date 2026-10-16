@@ -1,18 +1,14 @@
 """Entity-Klasse für eine Zahlung."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from typing import override
 lazy from datetime import date
 lazy from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Identity, Numeric
+from sqlalchemy import ForeignKey, Identity
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from mitglied.entity.base import Base
-
-if TYPE_CHECKING:
-    from mitglied.entity.mitglied import Mitglied
+from mitglied.entity.mitglied import Mitglied
 
 
 class Zahlung(Base):
@@ -20,11 +16,25 @@ class Zahlung(Base):
 
     __tablename__ = "zahlung"
 
-    betrag: Mapped[Decimal] = mapped_column(Numeric(10, 2))
-    zahlungsdatum: Mapped[date]
+    betrag: Mapped[Decimal]
+    """Der Betrag."""
 
-    id: Mapped[int] = mapped_column(Identity(start=1000), primary_key=True, init=False)
-    mitglied_id: Mapped[int] = mapped_column(ForeignKey("mitglied.id"), init=False)
-    mitglied: Mapped[Mitglied] = relationship(
-        back_populates="zahlungen", init=False, repr=False
-    )
+    zahlungsdatum: Mapped[date]
+    """Das Zahlungsdatum."""
+
+    id: Mapped[int | None] = mapped_column(Identity(start=1000), primary_key=True)
+    """Die generierte ID gemäß der zugehörigen IDENTITY-Spalte."""
+
+    mitglied_id: Mapped[int | None] = mapped_column(ForeignKey("mitglied.id"))
+    """ID des zugehörigen Mitglieds als Fremdschlüssel in der DB-Tabelle."""
+
+    mitglied: Mapped[Mitglied | None] = relationship(back_populates=Mitglied.zahlungen)
+    """Das zugehörige transiente Mitglied-Objekt."""
+
+    @override
+    def __repr__(self) -> str:
+        """Zahlung als String ohne die Mitgliedsdaten ausgeben."""
+        return (
+            f"Zahlung(id={self.id}, betrag={self.betrag}, "
+            f"zahlungsdatum={self.zahlungsdatum})"
+        )
