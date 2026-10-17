@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
 from mitglied.entity import Base, Geschlecht, Mitglied, Tarif, Vertrag, Zahlung
-from mitglied.repository import MitgliedRepository
+from mitglied.repository import MitgliedRepository, MitgliedSuchparameter, Pageable
 
 
 @pytest.fixture
@@ -213,3 +213,50 @@ def test_repository_find_by_id_laedt_vertrag(engine) -> None:
 def test_repository_find_by_id_ohne_treffer(engine, mitglied_id) -> None:
     with Session(engine) as session:
         assert MitgliedRepository().find_by_id(mitglied_id, session) is None
+
+
+@pytest.mark.parametrize(
+    ("suchparameter", "size", "number", "erwartete_anzahl", "gesamt"),
+    [
+        (None, 1, 0, 1, 2),
+        (MitgliedSuchparameter(), 1, 1, 1, 2),
+        (None, 1, 2, 0, 2),
+        (None, 0, 0, 2, 2),
+        (MitgliedSuchparameter(email="alex@example.org"), 5, 0, 1, 1),
+        (MitgliedSuchparameter(email="fehlt@example.org"), 5, 0, 0, 0),
+        (MitgliedSuchparameter(nachname="mUs"), 1, 0, 1, 2),
+        (MitgliedSuchparameter(nachname="mUs"), 1, 1, 1, 2),
+        (MitgliedSuchparameter(nachname="mUs"), 0, 0, 2, 2),
+        (MitgliedSuchparameter(nachname="Fehlt"), 5, 0, 0, 0),
+        (
+            MitgliedSuchparameter(email="alex@example.org", nachname="Fehlt"),
+            5,
+            0,
+            1,
+            1,
+        ),
+    ],
+)
+def test_repository_find(  # ruff: ignore[too-many-arguments]
+    engine, *, suchparameter, size, number, erwartete_anzahl, gesamt
+) -> None:
+    with Session(engine) as session:
+        erstes = neues_mitglied()
+        zweites = neues_mitglied()
+        zweites.email = "kim@example.org"
+        session.add_all([erstes, zweites])
+        session.commit()
+        session.expunge_all()
+
+        ergebnis = MitgliedRepository().find(
+            suchparameter=suchparameter,
+            pageable=Pageable(size=size, number=number),
+            session=session,
+        )
+        assert len(ergebnis.content) == erwartete_anzahl
+        assert ergebnis.total_elements == gesamt
+        if suchparameter is not None and suchparameter.email == "alex@example.org":
+            assert ergebnis.content[0].email == "alex@example.org"
+        session.expunge_all()
+
+    assert all(mitglied.vertrag is not None for mitglied in ergebnis.content)
