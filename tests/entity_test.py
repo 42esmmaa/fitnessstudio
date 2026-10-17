@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
 from mitglied.entity import Base, Geschlecht, Mitglied, Tarif, Vertrag, Zahlung
+from mitglied.repository import MitgliedRepository
 
 
 @pytest.fixture
@@ -189,3 +190,26 @@ def test_vergleich_und_ausgabe_ohne_beziehungen(engine) -> None:
     assert hash(geladen) == hash(anderes)
     assert "Mitglied(" in repr(geladen)
     assert "Vertrag(" not in repr(geladen)
+
+
+def test_repository_find_by_id_laedt_vertrag(engine) -> None:
+    with Session(engine) as session:
+        mitglied = neues_mitglied()
+        session.add(mitglied)
+        session.commit()
+        mitglied_id = mitglied.id
+        session.expunge_all()
+
+        gefunden = MitgliedRepository().find_by_id(mitglied_id, session)
+        assert gefunden is not None
+        assert gefunden.id == mitglied_id
+        session.expunge_all()
+
+    assert gefunden.vertrag is not None
+    assert gefunden.vertrag.tarif is Tarif.STUDENT
+
+
+@pytest.mark.parametrize("mitglied_id", [None, 9999])
+def test_repository_find_by_id_ohne_treffer(engine, mitglied_id) -> None:
+    with Session(engine) as session:
+        assert MitgliedRepository().find_by_id(mitglied_id, session) is None
