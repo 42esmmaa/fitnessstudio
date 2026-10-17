@@ -260,3 +260,32 @@ def test_repository_find(  # ruff: ignore[too-many-arguments]
         session.expunge_all()
 
     assert all(mitglied.vertrag is not None for mitglied in ergebnis.content)
+
+
+@pytest.mark.parametrize(
+    ("email", "erwartet"),
+    [("alex@example.org", True), ("fehlt@example.org", False)],
+)
+def test_repository_exists_email(engine, email, erwartet) -> None:
+    with Session(engine) as session:
+        session.add(neues_mitglied())
+        session.commit()
+        assert MitgliedRepository().exists_email(email, session) is erwartet
+
+
+def test_repository_exists_email_other_id(engine) -> None:
+    with Session(engine) as session:
+        erstes = neues_mitglied()
+        zweites = neues_mitglied()
+        zweites.email = "kim@example.org"
+        session.add_all([erstes, zweites])
+        session.commit()
+        assert erstes.id is not None
+        repository = MitgliedRepository()
+        assert not repository.exists_email_other_id(
+            "alex@example.org", erstes.id, session
+        )
+        assert repository.exists_email_other_id("kim@example.org", erstes.id, session)
+        assert not repository.exists_email_other_id(
+            "fehlt@example.org", erstes.id, session
+        )

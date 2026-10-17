@@ -160,3 +160,39 @@ class MitgliedRepository:
         )
         count: Final = session.execute(statement).scalar()
         return count if count is not None else 0
+
+    def exists_email(self, email: str, session: Session) -> bool:
+        """Abfrage, ob es die Emailadresse bereits gibt.
+
+        :param email: Emailadresse
+        :param session: Session für SQLAlchemy
+        :return: True, falls es die Emailadresse bereits gibt, False sonst
+        :rtype: bool
+        """
+        logger.debug("email={}", email)
+
+        statement: Final = select(func.count()).where(Mitglied.email == email)
+        anzahl: Final = session.scalar(statement)
+        logger.debug("anzahl={}", anzahl)
+        return anzahl is not None and anzahl > 0
+
+    def exists_email_other_id(
+        self,
+        email: str,
+        mitglied_id: int,
+        session: Session,
+    ) -> bool:
+        """Abfrage, ob es die Emailadresse bei einer anderen Mitglied-ID bereits gibt.
+
+        :param email: Emailadresse
+        :param mitglied_id: eigene Mitglied-ID
+        :param session: Session für SQLAlchemy
+        :return: True, falls es die Emailadresse bereits gibt, False sonst
+        :rtype: bool
+        """
+        logger.debug("email={}", email)
+
+        statement: Final = select(Mitglied.id).where(Mitglied.email == email)
+        id_db: Final = session.scalar(statement)
+        logger.debug("id_db={}", id_db)
+        return id_db is not None and id_db != mitglied_id
