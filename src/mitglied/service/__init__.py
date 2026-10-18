@@ -8,6 +8,7 @@ from mitglied.service.exceptions import (
 )
 from mitglied.service.mitglied_dto import MitgliedDTO
 from mitglied.service.mitglied_service import MitgliedService
+from mitglied.service.mitglied_write_service import MitgliedWriteService
 from mitglied.service.vertrag_dto import VertragDTO
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "ForbiddenError",
     "MitgliedDTO",
     "MitgliedService",
+    "MitgliedWriteService",
     "NotFoundError",
     "VersionOutdatedError",
     "VertragDTO",
