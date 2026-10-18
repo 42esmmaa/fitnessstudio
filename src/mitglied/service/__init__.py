@@ -7,12 +7,14 @@ from mitglied.service.exceptions import (
     VersionOutdatedError,
 )
 from mitglied.service.mitglied_dto import MitgliedDTO
+from mitglied.service.mitglied_service import MitgliedService
 from mitglied.service.vertrag_dto import VertragDTO
 
 __all__ = [
     "EmailExistsError",
     "ForbiddenError",
     "MitgliedDTO",
+    "MitgliedService",
     "NotFoundError",
     "VersionOutdatedError",
     "VertragDTO",
