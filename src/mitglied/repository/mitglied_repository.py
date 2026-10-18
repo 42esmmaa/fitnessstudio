@@ -82,17 +82,24 @@ class MitgliedRepository:
         return Slice(content=(), total_elements=0)
 
     def _find_all(self, pageable: Pageable, session: Session) -> Slice[Mitglied]:
+        # ORDER BY ist bei LIMIT/OFFSET noetig: ohne Sortierung liefert die DB die
+        # Datensaetze in beliebiger Reihenfolge und die Seiten koennten sich ueberlappen
         logger.debug("aufgerufen")
         offset = pageable.number * pageable.size
         statement: Final = (
             (
                 select(Mitglied)
                 .options(joinedload(Mitglied.vertrag))
+                .order_by(Mitglied.id)
                 .limit(pageable.size)
                 .offset(offset)
             )
             if pageable.size != 0
-            else (select(Mitglied).options(joinedload(Mitglied.vertrag)))
+            else (
+                select(Mitglied)
+                .options(joinedload(Mitglied.vertrag))
+                .order_by(Mitglied.id)
+            )
         )
         mitglieder: Final = (session.scalars(statement)).all()
         anzahl: Final = self._count_all_rows(session)
@@ -136,6 +143,7 @@ class MitgliedRepository:
                 select(Mitglied)
                 .options(joinedload(Mitglied.vertrag))
                 .filter(Mitglied.nachname.ilike(f"%{teil}%"))
+                .order_by(Mitglied.id)
                 .limit(pageable.size)
                 .offset(offset)
             )
@@ -144,6 +152,7 @@ class MitgliedRepository:
                 select(Mitglied)
                 .options(joinedload(Mitglied.vertrag))
                 .filter(Mitglied.nachname.ilike(f"%{teil}%"))
+                .order_by(Mitglied.id)
             )
         )
         mitglieder: Final = session.scalars(statement).all()

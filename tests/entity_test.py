@@ -289,3 +289,46 @@ def test_repository_exists_email_other_id(engine) -> None:
         assert not repository.exists_email_other_id(
             "fehlt@example.org", erstes.id, session
         )
+
+
+def test_repository_findet_mitglied_ohne_vertrag(engine) -> None:
+    with Session(engine) as session:
+        mitglied = neues_mitglied()
+        mitglied.vertrag = None
+        session.add(mitglied)
+        session.commit()
+        mitglied_id = mitglied.id
+        session.expunge_all()
+
+        repository = MitgliedRepository()
+        gefunden = repository.find_by_id(mitglied_id, session)
+        assert gefunden is not None
+        assert gefunden.vertrag is None
+        alle = repository.find(None, Pageable(size=5, number=0), session)
+        assert len(alle.content) == alle.total_elements == 1
+
+
+# 3 Mitglieder, je 1 pro Seite
+ANZAHL_SEITEN = 3
+
+
+@pytest.mark.parametrize("suchparameter", [None, MitgliedSuchparameter(nachname="mus")])
+def test_repository_find_seiten_sortiert(engine, suchparameter) -> None:
+    with Session(engine) as session:
+        for nummer in range(ANZAHL_SEITEN):
+            mitglied = neues_mitglied()
+            mitglied.email = f"mitglied{nummer}@example.org"
+            session.add(mitglied)
+        session.commit()
+
+        repository = MitgliedRepository()
+        ids = [
+            mitglied.id
+            for nummer in range(ANZAHL_SEITEN)
+            for mitglied in repository.find(
+                suchparameter, Pageable(size=1, number=nummer), session
+            ).content
+            if mitglied.id is not None
+        ]
+        assert ids == sorted(ids)
+        assert len(set(ids)) == len(ids) == ANZAHL_SEITEN

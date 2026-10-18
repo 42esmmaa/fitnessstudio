@@ -36,7 +36,7 @@ class Mitglied(Base):
     """Die generierte ID gemäß der zugehörigen IDENTITY-Spalte."""
     vertrag: Mapped[Vertrag | None] = relationship(
         back_populates=lambda: Vertrag.mitglied,
-        innerjoin=True,
+        # kein innerjoin=True: sonst fehlen Mitglieder ohne Vertrag bei joinedload()
         cascade="save-update, delete",
     )
     """Der in einer 1:1-Beziehung referenzierte Vertrag."""
