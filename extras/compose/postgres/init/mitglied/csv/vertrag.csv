@@ -1,0 +1,8 @@
+id;beginn;monatlicher_beitrag;tarif;getraenkeflat;mitglied_id
+1;2026-01-01;49.90;PREMIUM;true;1
+20;2026-01-02;19.90;STUDENT;false;20
+30;2026-01-03;24.90;BASIC;false;30
+40;2026-01-04;19.90;STUDENT;true;40
+50;2026-01-05;49.90;PREMIUM;true;50
+60;2026-01-06;24.90;BASIC;false;60
+70;2026-01-07;49.90;PREMIUM;false;70

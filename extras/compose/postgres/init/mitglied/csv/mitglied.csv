@@ -1,0 +1,8 @@
+id;version;vorname;nachname;email;geburtsdatum;geschlecht;interessen;erzeugt;aktualisiert
+1;0;Admin;Admin;admin@fitnessstudio.de;1990-01-01;DIVERS;;2026-01-01 00:00:00;2026-01-01 00:00:00
+20;0;Alice;Alpha;alice@fitnessstudio.de;1998-02-02;WEIBLICH;"[""Yoga"",""Pilates""]";2026-01-02 00:00:00;2026-01-02 00:00:00
+30;0;Bob;Beta;bob@fitnessstudio.de;1995-03-03;MAENNLICH;"[""Krafttraining""]";2026-01-03 00:00:00;2026-01-03 00:00:00
+40;0;Carla;Gamma;carla@fitnessstudio.de;2003-04-04;WEIBLICH;"[""Spinning"",""Schwimmen""]";2026-01-04 00:00:00;2026-01-04 00:00:00
+50;0;David;Delta;david@fitnessstudio.de;1987-05-05;MAENNLICH;;2026-01-05 00:00:00;2026-01-05 00:00:00
+60;0;Emma;Epsilon;emma@fitnessstudio.de;2001-06-06;DIVERS;"[""Boxen""]";2026-01-06 00:00:00;2026-01-06 00:00:00
+70;0;Felix;Alphaner;felix@fitnessstudio.de;1979-07-07;MAENNLICH;"[""Krafttraining"",""Sauna""]";2026-01-07 00:00:00;2026-01-07 00:00:00
