@@ -1,0 +1,52 @@
+# PostgreSQL als Docker-Container fuer den Appserver "Fitnessstudio"
+#
+# Voraussetzung: .env im Projektverzeichnis mit den Passwoertern (siehe .env.example)
+#
+# Aufruf (im Verzeichnis extras/compose/postgres):
+#   docker compose up        Server starten (beim 1. Start: DB, User, Schema anlegen)
+#   docker compose down      Server herunterfahren, die Daten bleiben im Volume
+#   docker compose down -v   zusaetzlich das Volume loeschen, d.h. alles neu initialisieren
+#
+# https://hub.docker.com/_/postgres
+# https://github.com/compose-spec/compose-spec/blob/main/spec.md
+
+---
+services:
+  postgres:
+    image: postgres:18-trixie
+    ports:
+      - published: 5432
+        target: 5432
+    volumes:
+      # Datenbankdateien; ab PostgreSQL 18 wird /var/lib/postgresql gemountet
+      - pg_data:/var/lib/postgresql
+      # SQL-Skripte, die nur beim 1. Start (leeres Volume) ausgefuehrt werden,
+      # und zwar alphabetisch: create-db.sh, dann create-schema.sql
+      - ./init/mitglied/sql:/docker-entrypoint-initdb.d:ro
+      # CSV-Dateien fuer COPY beim Neuladen der DB durch den Appserver
+      - ./init:/init:ro
+    # Passwoerter aus der lokalen .env im Projektverzeichnis (nicht im Repository):
+    # POSTGRES_PASSWORD fuer den Superuser "postgres",
+    # MITGLIED_DB_PASSWORD fuer den DB-User "mitglied" (siehe create-db.sh)
+    env_file: ../../../.env
+    environment:
+      TZ: Europe/Berlin
+      POSTGRES_INITDB_ARGS: "--auth-local=scram-sha-256 --auth-host=scram-sha-256"
+    hostname: postgres
+    container_name: postgres
+    healthcheck:
+      test: [CMD, pg_isready, --dbname=postgres, --username=postgres]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+
+volumes:
+  pg_data:
+    name: pg_data_fitnessstudio
