@@ -6,10 +6,14 @@ from mitglied.service.exceptions import (
     NotFoundError,
     VersionOutdatedError,
 )
+from mitglied.service.mitglied_dto import MitgliedDTO
+from mitglied.service.vertrag_dto import VertragDTO
 
 __all__ = [
     "EmailExistsError",
     "ForbiddenError",
+    "MitgliedDTO",
     "NotFoundError",
     "VersionOutdatedError",
+    "VertragDTO",
 ]

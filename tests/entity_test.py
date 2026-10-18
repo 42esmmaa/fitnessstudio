@@ -11,6 +11,7 @@ from sqlalchemy.orm.exc import StaleDataError
 
 from mitglied.entity import Base, Geschlecht, Mitglied, Tarif, Vertrag, Zahlung
 from mitglied.repository import MitgliedRepository, MitgliedSuchparameter, Pageable
+from mitglied.service import MitgliedDTO
 
 
 @pytest.fixture
@@ -480,3 +481,46 @@ def test_repository_delete_ohne_treffer(engine) -> None:
     with Session(engine) as session:
         MitgliedRepository().delete_by_id(9999, session)
         session.commit()
+
+
+@pytest.mark.parametrize("mit_vertrag", [True, False])
+@pytest.mark.parametrize("interessen", [["Yoga"], [], None])
+def test_mitglied_dto_nach_schliessen_der_session(
+    engine, mit_vertrag, interessen
+) -> None:
+    with Session(engine) as session:
+        mitglied = neues_mitglied()
+        mitglied.interessen = interessen
+        if not mit_vertrag:
+            mitglied.vertrag = None
+        session.add(mitglied)
+        session.commit()
+        dto = MitgliedDTO.from_mitglied(mitglied)
+        mitglied_id = mitglied.id
+
+    assert dto.id == mitglied_id
+    assert dto.version == 1
+    assert dto.vorname == "Alex"
+    assert dto.nachname == "Muster"
+    assert dto.email == "alex@example.org"
+    assert dto.geburtsdatum == date(2000, 1, 1)
+    assert dto.geschlecht is Geschlecht.DIVERS
+    assert dto.interessen == interessen
+    if interessen is not None:
+        assert dto.interessen is not None
+        urspruengliche_interessen = list(interessen)
+        dto.interessen.append("Schwimmen")
+        assert interessen == urspruengliche_interessen
+    if mit_vertrag:
+        assert dto.vertrag is not None
+        assert dto.vertrag.beginn == date(2026, 10, 1)
+        assert dto.vertrag.monatlicher_beitrag == Decimal("29.90")
+        assert dto.vertrag.tarif is Tarif.STUDENT
+        assert dto.vertrag.getraenkeflat is True
+    else:
+        assert dto.vertrag is None
+
+
+def test_mitglied_dto_ohne_generierte_id() -> None:
+    dto = MitgliedDTO.from_mitglied(neues_mitglied())
+    assert dto.id == -1

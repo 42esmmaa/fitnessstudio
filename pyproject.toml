@@ -75,6 +75,8 @@ dependencies = [
     "python-dotenv>=1.2.1,<2.0.0",
     # https://www.sqlalchemy.org ORM-Basisklasse fuer die Entities
     "sqlalchemy>=2.1.1,<3.0.0",
+    # GraphQL-Typen fuer DTOs wie in der Vorlage
+    "strawberry-graphql>=0.327.7,<1.0.0",
     # https://www.uvicorn.dev ASGI-Server, wird in asgi_server.py gestartet
     "uvicorn>=0.54.0,<1.0.0",
 ]

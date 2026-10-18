@@ -2,7 +2,10 @@
 
 from enum import StrEnum
 
+import strawberry
 
+
+@strawberry.enum
 class Tarif(StrEnum):
     """Die verfügbaren Vertragstarife."""
 
