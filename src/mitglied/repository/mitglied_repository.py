@@ -212,3 +212,63 @@ class MitgliedRepository:
         id_db: Final = session.scalar(statement)
         logger.debug("id_db={}", id_db)
         return id_db is not None and id_db != mitglied_id
+
+    def create(self, mitglied: Mitglied, session: Session) -> Mitglied:
+        """Speichere ein neues Mitglied ab.
+
+        :param mitglied: Die Daten des neuen Mitglieds ohne ID
+        :param session: Session für SQLAlchemy
+        :return: Das neu angelegte Mitglied mit generierter ID
+        :rtype: Mitglied
+        """
+        logger.debug(
+            "mitglied={}, mitglied.vertrag={}, mitglied.zahlungen={}",
+            mitglied,
+            mitglied.vertrag,
+            mitglied.zahlungen,
+        )
+        session.add(instance=mitglied)
+        # flush(), damit die ID aus der Sequence vor COMMIT fuer Logging verfuegbar ist
+        session.flush(objects=[mitglied])
+        logger.debug("mitglied_id={}", mitglied.id)
+        return mitglied
+
+    def update(self, mitglied: Mitglied, session: Session) -> Mitglied | None:
+        """Aktualisiere ein Mitglied.
+
+        :param mitglied: Die neuen Mitgliedsdaten
+        :param session: Session für SQLAlchemy
+        :return: Das aktualisierte Mitglied oder None, falls kein Mitglied mit der ID
+        existiert
+        :rtype: Mitglied | None
+        """
+        logger.debug("{}", mitglied)
+
+        if (
+            mitglied_db := self.find_by_id(mitglied_id=mitglied.id, session=session)
+        ) is None:
+            # Mitgliedsdaten wurden i.a. zuvor in der Session aktualisiert
+            return None
+
+        # session.add(mitglied_db) nicht notwendig,
+        # da bereits in der Session zugegriffen
+        # CAVEAT: Die erhoehte Versionsnummer ist erst *nach* COMMIT sichtbar
+
+        logger.debug("{}", mitglied_db)
+        return mitglied_db
+
+    def delete_by_id(self, mitglied_id: int, session: Session) -> None:
+        """Lösche die Daten zu einem Mitglied.
+
+        :param mitglied_id: Die ID des zu löschenden Mitglieds
+        :param session: Session für SQLAlchemy
+        """
+        logger.debug("mitglied_id={}", mitglied_id)
+
+        # delete(Mitglied).where(Mitglied.id == mitglied_id) OHNE cascade
+        if (
+            mitglied := self.find_by_id(mitglied_id=mitglied_id, session=session)
+        ) is None:
+            return
+        session.delete(mitglied)
+        logger.debug("ok")

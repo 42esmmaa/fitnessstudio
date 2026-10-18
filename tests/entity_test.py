@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import create_engine, insert, select
+from sqlalchemy import create_engine, func, insert, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
@@ -400,3 +400,83 @@ def test_repository_nachname_platzhalter_maskiert(
             erwartete_nachnamen
         )
         assert ergebnis.total_elements == len(erwartete_nachnamen)
+
+
+def test_repository_create_speichert_beziehungen(engine) -> None:
+    with Session(engine) as session:
+        mitglied = neues_mitglied()
+        anzahl_zahlungen = len(mitglied.zahlungen)
+        angelegt = MitgliedRepository().create(mitglied, session)
+        assert angelegt is mitglied
+        assert angelegt.id is not None
+        assert angelegt.vertrag is not None
+        assert angelegt.vertrag.mitglied_id == angelegt.id
+        assert all(zahlung.mitglied_id == angelegt.id for zahlung in angelegt.zahlungen)
+        mitglied_id = angelegt.id
+        session.commit()
+
+    with Session(engine) as session:
+        geladen = MitgliedRepository().find_by_id(mitglied_id, session)
+        assert geladen is not None
+        assert geladen.vertrag is not None
+        assert len(geladen.zahlungen) == anzahl_zahlungen
+
+
+def test_repository_create_rollback(engine) -> None:
+    with Session(engine) as session:
+        MitgliedRepository().create(neues_mitglied(), session)
+        session.rollback()
+
+    with Session(engine) as session:
+        for entity in (Mitglied, Vertrag, Zahlung):
+            assert session.scalar(select(func.count()).select_from(entity)) == 0
+
+
+def test_repository_update_geaendertes_session_objekt(engine) -> None:
+    with Session(engine, autoflush=False) as session:
+        repository = MitgliedRepository()
+        mitglied = repository.create(neues_mitglied(), session)
+        session.commit()
+        mitglied_id = mitglied.id
+        vorherige_version = mitglied.version
+        neue_daten = neues_mitglied()
+        neue_daten.vorname = "Kim"
+        mitglied.set(neue_daten)
+        assert repository.update(mitglied, session) is mitglied
+        session.commit()
+
+    with Session(engine) as session:
+        geladen = MitgliedRepository().find_by_id(mitglied_id, session)
+        assert geladen is not None
+        assert geladen.vorname == "Kim"
+        assert geladen.version == vorherige_version + 1
+
+
+@pytest.mark.parametrize("mitglied_id", [None, 9999])
+def test_repository_update_ohne_treffer(engine, mitglied_id) -> None:
+    mitglied = neues_mitglied()
+    mitglied.id = mitglied_id
+    with Session(engine) as session:
+        assert MitgliedRepository().update(mitglied, session) is None
+
+
+def test_repository_delete_loescht_beziehungen(engine) -> None:
+    with Session(engine) as session:
+        mitglied = neues_mitglied()
+        session.add(mitglied)
+        session.commit()
+        mitglied_id = mitglied.id
+        assert mitglied_id is not None
+        session.expunge_all()
+        MitgliedRepository().delete_by_id(mitglied_id, session)
+        session.commit()
+
+    with Session(engine) as session:
+        for entity in (Mitglied, Vertrag, Zahlung):
+            assert session.scalar(select(func.count()).select_from(entity)) == 0
+
+
+def test_repository_delete_ohne_treffer(engine) -> None:
+    with Session(engine) as session:
+        MitgliedRepository().delete_by_id(9999, session)
+        session.commit()
