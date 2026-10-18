@@ -1,0 +1,3 @@
+# Zeilenenden im Repository immer LF, auch unter Windows
+# (sonst z.B. "p\r" als DB-Passwort in password.txt)
+* text=auto eol=lf
