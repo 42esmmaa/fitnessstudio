@@ -71,6 +71,8 @@ dependencies = [
     "loguru>=0.7.3,<1.0.0",
     # https://www.psycopg.org/psycopg3 DB-Treiber fuer PostgreSQL (binary: inkl. libpq)
     "psycopg[binary]>=3.3.6,<4.0.0",
+    # Validierung der REST-Eingabemodelle wie in der Vorlage
+    "pydantic>=2.13.5,<3.0.0",
     # https://github.com/theskumar/python-dotenv Passwoerter aus der lokalen Datei .env
     "python-dotenv>=1.2.1,<2.0.0",
     # https://www.sqlalchemy.org ORM-Basisklasse fuer die Entities
