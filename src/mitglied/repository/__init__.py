@@ -8,6 +8,7 @@ from mitglied.repository.pageable import (
     MAX_PAGE_SIZE,
     Pageable,
 )
+from mitglied.repository.session_factory import Session, engine
 from mitglied.repository.slice import Slice
 
 # https://docs.python.org/3/tutorial/modules.html#importing-from-a-package
@@ -18,5 +19,7 @@ __all__ = [
     "MitgliedRepository",
     "MitgliedSuchparameter",
     "Pageable",
+    "Session",
     "Slice",
+    "engine",
 ]
