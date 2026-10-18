@@ -15,8 +15,10 @@ services:
   postgres:
     image: postgres:18-trixie
     ports:
+      # nur vom eigenen Rechner erreichbar, nicht z.B. aus dem Hochschul-WLAN
       - published: 5432
         target: 5432
+        host_ip: 127.0.0.1
     volumes:
       # Datenbankdateien; ab PostgreSQL 18 wird /var/lib/postgresql gemountet
       - pg_data:/var/lib/postgresql
