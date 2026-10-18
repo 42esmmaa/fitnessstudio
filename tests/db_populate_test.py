@@ -4,8 +4,8 @@ from importlib.resources import files
 
 from mitglied.config.dev.db_populate import DbPopulateService
 
-# create.sql: 2 Enum-Typen, 3 Tabellen, 2 Indexe
-ANZAHL_CREATE = 7
+# create.sql: 2 Enum-Typen, 3 Tabellen, 3 Indexe
+ANZAHL_CREATE = 8
 # drop.sql: je 1 Anweisung fuer Indexe, Tabellen und Enum-Typen
 ANZAHL_DROP = 3
 

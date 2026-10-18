@@ -2,6 +2,7 @@
 
 DROP INDEX IF EXISTS
     zahlung_mitglied_id_idx,
+    mitglied_email_idx,
     mitglied_nachname_idx;
 
 -- zuerst die Tabellen mit Fremdschluesseln, zuletzt "mitglied"

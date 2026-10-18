@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS mitglied (
     version       INTEGER NOT NULL DEFAULT 0,
     vorname       TEXT NOT NULL,
     nachname      TEXT NOT NULL,
-                  -- UNIQUE erzeugt implizit einen Index
-    email         TEXT NOT NULL UNIQUE,
+                  -- eindeutig ohne Gross-/Kleinschreibung: siehe mitglied_email_idx
+    email         TEXT NOT NULL,
     geburtsdatum  DATE NOT NULL CHECK (geburtsdatum < current_date),
     geschlecht    geschlecht NOT NULL,
                   -- JSON-Array mit Strings, z.B. ["Yoga", "Krafttraining"]
@@ -30,6 +30,11 @@ CREATE TABLE IF NOT EXISTS mitglied (
 
 -- fuer die Suche nach dem Nachnamen; Default: B-Baum
 CREATE INDEX IF NOT EXISTS mitglied_nachname_idx ON mitglied(nachname);
+
+-- Emailadresse eindeutig OHNE Gross-/Kleinschreibung, d.h. "a@x.de" = "A@X.DE";
+-- der Index ueber lower(email) wird auch fuer WHERE lower(email) = ... genutzt
+-- https://www.postgresql.org/docs/current/indexes-expressional.html
+CREATE UNIQUE INDEX IF NOT EXISTS mitglied_email_idx ON mitglied(lower(email));
 
 -- 1:1-Beziehung: UNIQUE bei mitglied_id, d.h. max. 1 Vertrag pro Mitglied
 CREATE TABLE IF NOT EXISTS vertrag (
