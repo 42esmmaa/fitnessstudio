@@ -4,7 +4,7 @@ from typing import Self, override
 lazy from datetime import date, datetime
 
 from sqlalchemy import JSON, Identity, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from mitglied.entity.base import Base
 lazy from mitglied.entity.geschlecht import Geschlecht
@@ -55,6 +55,15 @@ class Mitglied(Base):
     """Die Versionsnummer für optimistische Synchronisation."""
 
     __mapper_args__ = {"version_id_col": version}  # ruff: ignore[mutable-class-default]
+
+    @validates("email")
+    def _normalisiere_email(self, _key: str, email: str) -> str:
+        """Emailadresse vor dem Speichern in Kleinbuchstaben umwandeln.
+
+        Damit sind z.B. "Alice@Example.org" und "alice@example.org" dieselbe
+        Adresse und die UNIQUE-Bedingung greift auch bei anderer Schreibweise.
+        """
+        return email.strip().lower()
 
     def set(self, mitglied: Self) -> None:
         """Primitive Attributwerte vor einem Datenbank-Update übernehmen."""

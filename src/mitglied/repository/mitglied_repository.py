@@ -113,7 +113,7 @@ class MitgliedRepository:
         return count if count is not None else 0
 
     def _find_by_email(self, email: str, session: Session) -> Mitglied | None:
-        """Ein Mitglied anhand der Emailadresse suchen.
+        """Ein Mitglied anhand der Emailadresse ohne Groß-/Kleinschreibung suchen.
 
         :param email: Emailadresse
         :param session: Session für SQLAlchemy
@@ -124,7 +124,7 @@ class MitgliedRepository:
         statement: Final = (
             select(Mitglied)
             .options(joinedload(Mitglied.vertrag))
-            .where(Mitglied.email == email)
+            .where(func.lower(Mitglied.email) == email.lower())
         )
         mitglied: Final = session.scalar(statement)
         logger.debug("{}", mitglied)
@@ -136,13 +136,16 @@ class MitgliedRepository:
         pageable: Pageable,
         session: Session,
     ) -> Slice[Mitglied]:
+        # icontains(): Teilstring ohne Gross-/Kleinschreibung (ILIKE '%teil%');
+        # autoescape=True maskiert % und _ in der Eingabe, damit die Suche nach
+        # "%" nicht alle Mitglieder liefert
         logger.debug("teil={}", teil)
         offset = pageable.number * pageable.size
         statement: Final = (
             (
                 select(Mitglied)
                 .options(joinedload(Mitglied.vertrag))
-                .filter(Mitglied.nachname.ilike(f"%{teil}%"))
+                .filter(Mitglied.nachname.icontains(teil, autoescape=True))
                 .order_by(Mitglied.id)
                 .limit(pageable.size)
                 .offset(offset)
@@ -151,7 +154,7 @@ class MitgliedRepository:
             else (
                 select(Mitglied)
                 .options(joinedload(Mitglied.vertrag))
-                .filter(Mitglied.nachname.ilike(f"%{teil}%"))
+                .filter(Mitglied.nachname.icontains(teil, autoescape=True))
                 .order_by(Mitglied.id)
             )
         )
@@ -165,13 +168,13 @@ class MitgliedRepository:
         statement: Final = (
             select(func.count())
             .select_from(Mitglied)
-            .filter(Mitglied.nachname.ilike(f"%{teil}%"))
+            .filter(Mitglied.nachname.icontains(teil, autoescape=True))
         )
         count: Final = session.execute(statement).scalar()
         return count if count is not None else 0
 
     def exists_email(self, email: str, session: Session) -> bool:
-        """Abfrage, ob es die Emailadresse bereits gibt.
+        """Abfrage, ob es die Emailadresse bereits gibt (ohne Groß-/Kleinschreibung).
 
         :param email: Emailadresse
         :param session: Session für SQLAlchemy
@@ -180,7 +183,9 @@ class MitgliedRepository:
         """
         logger.debug("email={}", email)
 
-        statement: Final = select(func.count()).where(Mitglied.email == email)
+        statement: Final = select(func.count()).where(
+            func.lower(Mitglied.email) == email.lower()
+        )
         anzahl: Final = session.scalar(statement)
         logger.debug("anzahl={}", anzahl)
         return anzahl is not None and anzahl > 0
@@ -201,7 +206,9 @@ class MitgliedRepository:
         """
         logger.debug("email={}", email)
 
-        statement: Final = select(Mitglied.id).where(Mitglied.email == email)
+        statement: Final = select(Mitglied.id).where(
+            func.lower(Mitglied.email) == email.lower()
+        )
         id_db: Final = session.scalar(statement)
         logger.debug("id_db={}", id_db)
         return id_db is not None and id_db != mitglied_id

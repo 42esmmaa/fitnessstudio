@@ -332,3 +332,71 @@ def test_repository_find_seiten_sortiert(engine, suchparameter) -> None:
         ]
         assert ids == sorted(ids)
         assert len(set(ids)) == len(ids) == ANZAHL_SEITEN
+
+
+def test_email_wird_normalisiert() -> None:
+    mitglied = neues_mitglied()
+    mitglied.email = "  Alex.Muster@Example.ORG "
+    assert mitglied.email == "alex.muster@example.org"
+
+
+def test_email_eindeutig_ohne_gross_klein(engine) -> None:
+    with Session(engine) as session:
+        zweites = neues_mitglied()
+        zweites.email = "ALEX@Example.org"
+        session.add_all([neues_mitglied(), zweites])
+        with pytest.raises(IntegrityError):
+            session.commit()
+
+
+def test_repository_email_ohne_gross_klein(engine) -> None:
+    with Session(engine) as session:
+        mitglied = neues_mitglied()
+        session.add(mitglied)
+        session.commit()
+        assert mitglied.id is not None
+
+        repository = MitgliedRepository()
+        ergebnis = repository.find(
+            MitgliedSuchparameter(email="ALEX@Example.ORG"),
+            Pageable(size=5, number=0),
+            session,
+        )
+        assert [gefunden.id for gefunden in ergebnis.content] == [mitglied.id]
+        assert repository.exists_email("Alex@Example.org", session)
+        assert not repository.exists_email_other_id(
+            "ALEX@EXAMPLE.ORG", mitglied.id, session
+        )
+        assert repository.exists_email_other_id("ALEX@EXAMPLE.ORG", 9999, session)
+
+
+@pytest.mark.parametrize(
+    ("teil", "erwartete_nachnamen"),
+    [
+        # Platzhalter in der Eingabe duerfen nicht als Platzhalter wirken
+        ("%", []),
+        ("_", ["Mu_ster"]),
+        ("u_s", ["Mu_ster"]),
+        ("mu", ["Muster", "Mu_ster"]),
+    ],
+)
+def test_repository_nachname_platzhalter_maskiert(
+    engine, teil, erwartete_nachnamen
+) -> None:
+    with Session(engine) as session:
+        erstes = neues_mitglied()
+        zweites = neues_mitglied()
+        zweites.nachname = "Mu_ster"
+        zweites.email = "kim@example.org"
+        session.add_all([erstes, zweites])
+        session.commit()
+
+        ergebnis = MitgliedRepository().find(
+            MitgliedSuchparameter(nachname=teil),
+            Pageable(size=5, number=0),
+            session,
+        )
+        assert [mitglied.nachname for mitglied in ergebnis.content] == (
+            erwartete_nachnamen
+        )
+        assert ergebnis.total_elements == len(erwartete_nachnamen)
