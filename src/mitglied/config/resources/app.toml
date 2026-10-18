@@ -1,0 +1,20 @@
+# Konfiguration des Appservers
+# TOML = Tom's Obvious, Minimal Language https://toml.io
+# Auskommentierte Werte sind die Defaults im Code.
+# Passwoerter stehen NICHT hier, sondern in der lokalen Datei .env (siehe .env.example).
+
+[db]
+# name = "mitglied"
+# username = "mitglied"
+# port = 5432
+# sslmode = "prefer"
+host = "localhost"
+# SQL-Anweisungen protokollieren (für Lasttests ausschalten)
+log-statements = true
+
+[logger]
+debug-level = true
+
+[dev]
+# DB beim Serverstart mit drop.sql, create.sql und den CSV-Dateien neu laden
+db-populate = true
