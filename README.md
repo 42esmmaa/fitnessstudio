@@ -15,6 +15,8 @@ _Software Engineering_ an der Hochschule Karlsruhe.
 
 - [Projektstand](#projektstand)
 - [Voraussetzungen](#voraussetzungen)
+- [Datenbank (PostgreSQL)](#datenbank-postgresql)
+- [Keycloak](#keycloak)
 - [Installation und Start](#installation-und-start)
 - [Codeanalyse, Formatierung, Typprüfung und Tests](#codeanalyse-formatierung-typprüfung-und-tests)
 - [Endpunkte](#endpunkte)
@@ -31,6 +33,9 @@ _Software Engineering_ an der Hochschule Karlsruhe.
 - ✅ Issue #3 _Datenbank_: PostgreSQL per Docker Compose, SQL-Skripte
   `create.sql`/`drop.sql`, Repository mit Suchparametern, Pagination und
   Fetch-Join, Testdaten als CSV und Neuladen der DB per REST
+- ✅ Issue #4 _Keycloak_: Container per Docker Compose mit eigener Datenbank
+  `keycloak` in PostgreSQL, Realm `fitnessstudio` mit Client, Rollen und
+  Testbenutzern wird beim Start importiert
 - Alle weiteren Funktionen sind im [Projektplan](#projektplan) erfasst.
 
 ## Voraussetzungen
@@ -75,11 +80,30 @@ beim Start `drop.sql` und `create.sql` aus und lädt danach die CSV-Dateien aus
 `extras/compose/postgres/init/mitglied/csv` per `COPY` in die Tabellen.
 Im laufenden Betrieb geht das auch mit `POST /dev/db_populate`.
 
+Im selben Container liegt auch die Datenbank `keycloak` für Keycloak
+(Skript `create-keycloak-db.sh`, siehe [Keycloak](#keycloak)).
+
 DB-User der Anwendung ist `mitglied`, der Superuser ist `postgres`. Die
 Passwörter stehen in der lokalen `.env`. Wird ein Passwort nachträglich
 geändert, muss das Volume neu angelegt werden (`docker compose down -v`), weil
 die Init-Skripte nur beim ersten Start laufen.
 
+## Keycloak
+
+Keycloak läuft als Docker-Container mit eigener Datenbank `keycloak` im
+PostgreSQL-Container. Realm `fitnessstudio`, Client `fitnessstudio-client`,
+die Rollen `admin` und `mitglied` sowie Testbenutzer werden beim ersten Start
+automatisch angelegt.
+
+```shell
+cd extras/compose/keycloak
+docker compose up      # startet PostgreSQL mit
+```
+
+Admin-Konsole: <https://localhost:8843> bzw. <http://localhost:8880>, Details
+in [extras/compose/keycloak/ReadMe.md](extras/compose/keycloak/ReadMe.md).
+
+## Installation und Start
 
 ```shell
 git clone https://github.com/42esmmaa/fitnessstudio.git
@@ -132,6 +156,7 @@ fitnessstudio
 ├── uv.lock                 exakte Versionen aller Abhängigkeiten
 ├── extras
 │   └── compose
+│       ├── keycloak        compose.yml, Realm-Import, TLS-Zertifikat, ReadMe.md
 │       └── postgres        compose.yml, Init-Skripte für DB/Schema, CSV-Testdaten
 ├── .env.example            Vorlage für die lokale .env mit den Passwörtern
 ├── src
