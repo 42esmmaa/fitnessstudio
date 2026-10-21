@@ -23,13 +23,14 @@ services:
       # Datenbankdateien; ab PostgreSQL 18 wird /var/lib/postgresql gemountet
       - pg_data:/var/lib/postgresql
       # SQL-Skripte, die nur beim 1. Start (leeres Volume) ausgefuehrt werden,
-      # und zwar alphabetisch: create-db.sh, dann create-schema.sql
+      # und zwar alphabetisch: create-db.sh, create-keycloak-db.sh, create-schema.sql
       - ./init/mitglied/sql:/docker-entrypoint-initdb.d:ro
       # CSV-Dateien fuer COPY beim Neuladen der DB durch den Appserver
       - ./init:/init:ro
     # Passwoerter aus der lokalen .env im Projektverzeichnis (nicht im Repository):
     # POSTGRES_PASSWORD fuer den Superuser "postgres",
     # MITGLIED_DB_PASSWORD fuer den DB-User "mitglied" (siehe create-db.sh)
+    # KC_DB_PASSWORD fuer den DB-User "keycloak" (siehe create-keycloak-db.sh)
     env_file: ../../../.env
     environment:
       TZ: Europe/Berlin
@@ -37,7 +38,9 @@ services:
     hostname: postgres
     container_name: postgres
     healthcheck:
-      test: [CMD, pg_isready, --dbname=postgres, --username=postgres]
+      # ueber TCP pruefen: waehrend der Init-Skripte lauscht PostgreSQL nur auf dem
+      # Unix-Socket, d.h. der Container gilt erst danach als "healthy"
+      test: [CMD, pg_isready, --host=127.0.0.1, --dbname=postgres, --username=postgres]
       interval: 5s
       timeout: 2s
       retries: 3
