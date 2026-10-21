@@ -1,0 +1,98 @@
+# Keycloak als Docker-Container fuer den Appserver "Fitnessstudio"
+# nach dem Vorbild von Juergen Zimmermann (extras/compose/keycloak im Projekt "fastapi")
+#
+# Voraussetzung: .env im Projektverzeichnis mit KC_DB_PASSWORD und
+# KC_BOOTSTRAP_ADMIN_PASSWORD (siehe .env.example und ReadMe.md)
+#
+# Aufruf (im Verzeichnis extras/compose/keycloak):
+#   docker compose up        PostgreSQL und Keycloak starten
+#   docker compose down      beide Container herunterfahren
+#
+# https://www.keycloak.org/server/containers
+# https://www.keycloak.org/server/all-config
+# https://www.keycloak.org/server/db
+
+---
+# PostgreSQL mitstarten: Keycloak speichert seine Daten in der eigenen
+# Datenbank "keycloak" (siehe postgres/init/mitglied/sql/create-keycloak-db.sh)
+include:
+  - path: ../postgres/compose.yml
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.4
+    # start: Produktionsmodus; --import-realm liest import/*.json beim Start ein,
+    # ein schon vorhandener Realm wird dabei NICHT ueberschrieben
+    command: [start, --hostname-strict=false, --import-realm]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # nur vom eigenen Rechner erreichbar
+      - published: 8880
+        target: 8080
+        host_ip: 127.0.0.1
+      - published: 8843
+        target: 8443
+        host_ip: 127.0.0.1
+      # Management-Interface mit /health/ready und /health/live
+      - published: 9990
+        target: 9000
+        host_ip: 127.0.0.1
+    volumes:
+      # selbst-signiertes Zertifikat aus dem Beispielprojekt des Professors
+      # (gueltig fuer localhost, 127.0.0.1 und keycloak)
+      - ./tls:/opt/keycloak/tls:ro
+      # Realm "fitnessstudio" mit Client, Rollen und Testbenutzern
+      - ./import:/opt/keycloak/data/import:ro
+    # KC_DB_PASSWORD und KC_BOOTSTRAP_ADMIN_PASSWORD aus der lokalen .env
+    env_file: ../../../.env
+    environment:
+      TZ: Europe/Berlin
+
+      # temporaerer Administrator fuer die Admin-Konsole (Realm "master")
+      KC_BOOTSTRAP_ADMIN_USERNAME: tmp
+
+      # https://www.keycloak.org/server/all-config#category-http
+      KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/tls/certificate.crt
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/tls/key.pem
+      KC_HTTPS_PROTOCOLS: TLSv1.3
+      KC_HTTP_ENABLED: "true"
+
+      # eigene Datenbank "keycloak" mit Schema "keycloak" im PostgreSQL-Container
+      # https://www.keycloak.org/server/all-config#category-database
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_SCHEMA: keycloak
+      KC_DB_USERNAME: keycloak
+
+      # nur 1 Keycloak-Instanz, d.h. kein verteilter Cache
+      KC_CACHE: local
+      KC_LOG_CONSOLE_COLOR: "true"
+
+      # https://www.keycloak.org/server/health
+      KC_HEALTH_ENABLED: "true"
+      # Health-Checks im Container per HTTP statt HTTPS
+      KC_HTTP_MANAGEMENT_SCHEME: http
+    hostname: keycloak
+    container_name: keycloak
+    cap_drop: [ALL]
+    healthcheck:
+      # im Image gibt es weder curl noch wget, deshalb HTTP-Request mit der bash
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q 'HTTP/1.1 200' <&3
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
