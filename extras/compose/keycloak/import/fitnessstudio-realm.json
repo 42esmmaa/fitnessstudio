@@ -1,0 +1,68 @@
+{
+  "realm": "fitnessstudio",
+  "displayName": "Fitnessstudio",
+  "enabled": true,
+  "sslRequired": "external",
+  "accessTokenLifespan": 1800,
+  "accessTokenLifespanForImplicitFlow": 1800,
+  "ssoSessionIdleTimeout": 3600,
+  "roles": {
+    "client": {
+      "fitnessstudio-client": [
+        { "name": "admin", "description": "Administration" },
+        { "name": "mitglied", "description": "Registriertes Mitglied" }
+      ]
+    }
+  },
+  "clients": [
+    {
+      "clientId": "fitnessstudio-client",
+      "name": "Fitnessstudio Client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "rootUrl": "https://localhost:8000",
+      "redirectUris": ["*"],
+      "webOrigins": ["+"]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@fitnessstudio.de",
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "Admin",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "p", "temporary": false }],
+      "clientRoles": {
+        "fitnessstudio-client": ["admin"],
+        "realm-management": ["realm-admin", "manage-users", "query-users", "view-users"]
+      }
+    },
+    {
+      "username": "alice",
+      "email": "alice@fitnessstudio.de",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Alpha",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "p", "temporary": false }],
+      "clientRoles": { "fitnessstudio-client": ["mitglied"] }
+    },
+    {
+      "username": "bob",
+      "email": "bob@fitnessstudio.de",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Beta",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "p", "temporary": false }],
+      "clientRoles": { "fitnessstudio-client": ["mitglied"] }
+    }
+  ]
+}
