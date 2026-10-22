@@ -8,6 +8,7 @@ from mitglied.router.mitglied_find_model import (
 from mitglied.router.mitglied_model import MitgliedModel
 from mitglied.router.mitglied_router import mitglied_router
 from mitglied.router.mitglied_update_model import MitgliedUpdateModel
+from mitglied.router.mitglied_write_router import mitglied_write_router
 from mitglied.router.vertrag_model import VertragModel
 from mitglied.router.zahlung_model import ZahlungModel
 
@@ -20,4 +21,5 @@ __all__ = [
     "VertragModel",
     "ZahlungModel",
     "mitglied_router",
+    "mitglied_write_router",
 ]

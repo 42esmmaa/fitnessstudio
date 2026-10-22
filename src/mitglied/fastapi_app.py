@@ -12,9 +12,14 @@ from mitglied.config.dev.db_populate import db_populate
 from mitglied.config.dev.db_populate_router import router as db_populate_router
 from mitglied.problem_details import ProblemDetails
 from mitglied.repository import engine
-from mitglied.router import mitglied_router
+from mitglied.router import mitglied_router, mitglied_write_router
 from mitglied.security import AuthorizationError, LoginError, router as auth_router
-from mitglied.service import ForbiddenError, NotFoundError
+from mitglied.service import (
+    EmailExistsError,
+    ForbiddenError,
+    NotFoundError,
+    VersionOutdatedError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -39,6 +44,7 @@ app: Final = FastAPI(title="Fitnessstudio", version=__version__, lifespan=lifesp
 
 app.include_router(auth_router, prefix="/auth")
 app.include_router(mitglied_router, prefix="/rest")
+app.include_router(mitglied_write_router, prefix="/rest")
 
 
 @app.exception_handler(NotFoundError)
@@ -87,6 +93,37 @@ def login_error_handler(_request: Request, err: LoginError) -> Response:
     """
     return ProblemDetails.create(
         status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=str(err),
+    ).to_response()
+
+
+@app.exception_handler(EmailExistsError)
+def email_exists_error_handler(_request: Request, err: EmailExistsError) -> Response:
+    """Exception-Handling für EmailExistsError.
+
+    :param err: Exception, falls die Emailadresse bereits existiert
+    :return: Response mit Statuscode 422
+    :rtype: Response
+    """
+    return ProblemDetails.create(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail=str(err),
+    ).to_response()
+
+
+@app.exception_handler(VersionOutdatedError)
+def version_outdated_error_handler(
+    _request: Request,
+    err: VersionOutdatedError,
+) -> Response:
+    """Exception-Handling für VersionOutdatedError.
+
+    :param err: Exception, falls die Versionsnummer zum Aktualisieren veraltet ist
+    :return: Response mit Statuscode 412
+    :rtype: Response
+    """
+    return ProblemDetails.create(
+        status_code=status.HTTP_412_PRECONDITION_FAILED,
         detail=str(err),
     ).to_response()
 
