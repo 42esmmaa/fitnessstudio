@@ -12,7 +12,7 @@ from mitglied.repository import (
     Pageable,
     Slice,
 )
-from mitglied.security import Role, User
+from mitglied.security import Role, User, UserService
 from mitglied.service import (
     EmailExistsError,
     ForbiddenError,
@@ -40,6 +40,58 @@ def mitglied() -> Mitglied:
         erzeugt=None,
         aktualisiert=None,
     )
+
+
+def test_create_benutzer_und_mitglied(mitglied) -> None:
+    repo = create_autospec(MitgliedRepository, instance=True)
+    repo.exists_email.return_value = False
+    repo.create.return_value = mitglied
+    user_service = create_autospec(UserService, instance=True)
+    user_service.username_exists.return_value = False
+    user_service.email_exists.return_value = False
+    with patch("mitglied.service.mitglied_write_service.Session") as sessions:
+        session = sessions.return_value.__enter__.return_value
+        dto = MitgliedWriteService(repo, user_service).create(mitglied)
+        repo.exists_email.assert_called_once_with(email=mitglied.email, session=session)
+        repo.create.assert_called_once_with(mitglied=mitglied, session=session)
+        session.commit.assert_called_once_with()
+    user_service.create_user.assert_called_once()
+    user = user_service.create_user.call_args.args[0]
+    assert user.username == mitglied.email
+    assert user.email == mitglied.email
+    assert user.vorname == mitglied.vorname
+    assert user.nachname == mitglied.nachname
+    assert dto.id == mitglied.id
+
+
+@pytest.mark.parametrize("duplikat", ["username", "email", "datenbank"])
+def test_create_email_bereits_vergeben(mitglied, duplikat) -> None:
+    repo = create_autospec(MitgliedRepository, instance=True)
+    repo.exists_email.return_value = duplikat == "datenbank"
+    user_service = create_autospec(UserService, instance=True)
+    user_service.username_exists.return_value = duplikat == "username"
+    user_service.email_exists.return_value = duplikat == "email"
+    with patch("mitglied.service.mitglied_write_service.Session") as sessions:
+        with pytest.raises(EmailExistsError) as fehler:
+            MitgliedWriteService(repo, user_service).create(mitglied)
+        assert fehler.value.email == mitglied.email
+        repo.create.assert_not_called()
+        sessions.return_value.__enter__.return_value.commit.assert_not_called()
+        if duplikat != "datenbank":
+            user_service.create_user.assert_not_called()
+
+
+def test_create_keycloak_fehler_ohne_datenbankzugriff(mitglied) -> None:
+    repo = create_autospec(MitgliedRepository, instance=True)
+    user_service = create_autospec(UserService, instance=True)
+    user_service.username_exists.return_value = False
+    user_service.email_exists.return_value = False
+    user_service.create_user.side_effect = ConnectionError("Testfehler")
+    with patch("mitglied.service.mitglied_write_service.Session") as sessions:
+        with pytest.raises(ConnectionError):
+            MitgliedWriteService(repo, user_service).create(mitglied)
+        sessions.assert_not_called()
+    repo.create.assert_not_called()
 
 
 def test_find_wandelt_daten_um_und_behaelt_gesamtzahl(mitglied) -> None:
@@ -105,7 +157,9 @@ def test_update_uebernimmt_daten_und_erhoeht_dto_version(mitglied) -> None:
 
     with patch("mitglied.service.mitglied_write_service.Session") as sessions:
         session = sessions.return_value.__enter__.return_value
-        dto = MitgliedWriteService(repo).update(neue_daten, 1000, vorherige_version)
+        dto = MitgliedWriteService(
+            repo, user_service=create_autospec(UserService, instance=True)
+        ).update(neue_daten, 1000, vorherige_version)
         repo.exists_email_other_id.assert_called_once_with(
             mitglied_id=1000, email="kim@example.org", session=session
         )
@@ -150,7 +204,9 @@ def test_update_fehler_ohne_commit(mitglied, fall, fehlerklasse) -> None:
     with patch("mitglied.service.mitglied_write_service.Session") as sessions:
         session = sessions.return_value.__enter__.return_value
         with pytest.raises(fehlerklasse):
-            MitgliedWriteService(repo).update(neue_daten, 1000, version)
+            MitgliedWriteService(
+                repo, user_service=create_autospec(UserService, instance=True)
+            ).update(neue_daten, 1000, version)
         session.commit.assert_not_called()
         if fall != "update_ohne_treffer":
             repo.update.assert_not_called()
@@ -161,7 +217,9 @@ def test_delete_by_id_ruft_repository_auf_und_committet() -> None:
     repo = create_autospec(MitgliedRepository, instance=True)
     with patch("mitglied.service.mitglied_write_service.Session") as sessions:
         session = sessions.return_value.__enter__.return_value
-        MitgliedWriteService(repo).delete_by_id(1000)
+        MitgliedWriteService(
+            repo, user_service=create_autospec(UserService, instance=True)
+        ).delete_by_id(1000)
         repo.delete_by_id.assert_called_once_with(mitglied_id=1000, session=session)
         session.commit.assert_called_once_with()
         sessions.return_value.__exit__.assert_called_once_with(None, None, None)

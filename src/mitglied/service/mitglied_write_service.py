@@ -5,6 +5,7 @@ from typing import Final
 from loguru import logger
 
 from mitglied.repository import MitgliedRepository, Session
+from mitglied.security import User, UserService
 from mitglied.service.exceptions import (
     EmailExistsError,
     NotFoundError,
@@ -19,9 +20,55 @@ __all__ = ["MitgliedWriteService"]
 class MitgliedWriteService:
     """Service-Klasse mit Geschäftslogik für Mitglied."""
 
-    def __init__(self, repo: MitgliedRepository) -> None:
-        """Konstruktor mit abhängigem MitgliedRepository."""
+    def __init__(self, repo: MitgliedRepository, user_service: UserService) -> None:
+        """Konstruktor mit abhängigem MitgliedRepository und UserService."""
         self.repo: MitgliedRepository = repo
+        self.user_service: UserService = user_service
+
+    def create(self, mitglied: Mitglied) -> MitgliedDTO:
+        """Ein neues Mitglied anlegen.
+
+        :param mitglied: Das neue Mitglied ohne ID
+        :return: Das neu angelegte Mitglied mit generierter ID
+        :rtype: MitgliedDTO
+        :raises EmailExistsError: Falls die Emailadresse bereits existiert
+        """
+        logger.debug(
+            "mitglied={}, vertrag={}, zahlungen={}",
+            mitglied,
+            mitglied.vertrag,
+            mitglied.zahlungen,
+        )
+
+        email: Final = mitglied.email
+        if self.user_service.username_exists(email):
+            raise EmailExistsError(email=email)
+        if self.user_service.email_exists(email):
+            raise EmailExistsError(email=email)
+
+        user: Final = User(
+            username=email,
+            email=email,
+            nachname=mitglied.nachname,
+            vorname=mitglied.vorname,
+            password="p",  # ruff: ignore[hardcoded-password-func-arg] # NOSONAR
+            roles=[],
+        )
+        user_id = self.user_service.create_user(user)
+        logger.debug("user_id={}", user_id)
+
+        with Session() as session:
+            if self.repo.exists_email(email=email, session=session):
+                raise EmailExistsError(email=email)
+
+            mitglied_db: Final = self.repo.create(mitglied=mitglied, session=session)
+            mitglied_dto: Final = MitgliedDTO.from_mitglied(mitglied_db)
+            session.commit()
+
+        # TODO User aus Keycloak loeschen, falls die DB-Transaktion fehlschlaegt
+
+        logger.debug("mitglied_dto={}", mitglied_dto)
+        return mitglied_dto
 
     def update(self, mitglied: Mitglied, mitglied_id: int, version: int) -> MitgliedDTO:
         """Daten eines Mitglieds ändern.

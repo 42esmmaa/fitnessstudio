@@ -1,7 +1,7 @@
 """REST-Endpunkte zum Ändern und Löschen mit simulierten Services prüfen."""
 
 from http import HTTPStatus
-from unittest.mock import create_autospec
+from unittest.mock import create_autospec, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -67,6 +67,45 @@ def client(service, token_service):
         http_client.close()
         app.dependency_overrides.clear()
         app.dependency_overrides.update(vorherige_overrides)
+
+
+def test_post_anlegen_location_und_hintergrundmail(
+    client, service, token_service, daten
+) -> None:
+    daten["zahlungen"] = []
+    service.create.return_value.id = MITGLIED_ID
+    with patch("mitglied.router.mitglied_write_router.send_mail") as mail:
+        response = client.post("/rest", json=daten)
+        mail.assert_called_once_with(service.create.return_value)
+    assert response.status_code == HTTPStatus.CREATED
+    assert response.headers["location"] == f"http://testserver/rest/{MITGLIED_ID}"
+    assert response.content == b""
+    service.create.assert_called_once()
+    mitglied = service.create.call_args.kwargs["mitglied"]
+    assert mitglied.email == "alex@example.org"
+    assert mitglied.vertrag is None
+    assert mitglied.zahlungen == []
+    token_service.get_user_from_request.assert_not_called()
+
+
+def test_post_email_bereits_vergeben(client, service, daten) -> None:
+    daten["zahlungen"] = []
+    service.create.side_effect = EmailExistsError("alex@example.org")
+    with patch("mitglied.router.mitglied_write_router.send_mail") as mail:
+        response = client.post("/rest", json=daten)
+        mail.assert_not_called()
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.headers["content-type"] == "application/problem+json"
+
+
+def test_post_validierungsfehler(client, service, daten) -> None:
+    daten["zahlungen"] = []
+    daten["email"] = "keine-email"
+    with patch("mitglied.router.mitglied_write_router.send_mail") as mail:
+        response = client.post("/rest", json=daten)
+        mail.assert_not_called()
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    service.create.assert_not_called()
 
 
 @pytest.mark.parametrize("rolle", [Role.ADMIN, Role.MITGLIED])

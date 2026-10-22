@@ -2,13 +2,15 @@
 
 from typing import Annotated, Final
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response, status
 from loguru import logger
 
 from mitglied.problem_details import ProblemDetails
 from mitglied.router.constants import IF_MATCH, IF_MATCH_MIN_LEN
 from mitglied.router.dependencies import get_write_service
 from mitglied.security import Role, RolesRequired
+from mitglied.service import send_mail
+lazy from mitglied.router.mitglied_model import MitgliedModel
 lazy from mitglied.router.mitglied_update_model import MitgliedUpdateModel
 lazy from mitglied.service import MitgliedWriteService
 
@@ -16,6 +18,36 @@ __all__ = ["mitglied_write_router"]
 
 
 mitglied_write_router: Final = APIRouter(tags=["Schreiben"])
+
+
+@mitglied_write_router.post("")
+def post(
+    mitglied_model: MitgliedModel,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    service: Annotated[MitgliedWriteService, Depends(get_write_service)],
+) -> Response:
+    """POST-Request, um ein neues Mitglied anzulegen.
+
+    :param mitglied_model: Mitgliedsdaten als Pydantic-Model
+    :param request: Injiziertes Request-Objekt mit der Request-URL
+    :param background_tasks: Hintergrundtask für den Mailversand
+    :param service: Injizierter Service für Geschäftslogik
+    :rtype: Response
+    :raises ValidationError: Falls es bei Pydantic Validierungsfehler gibt
+    :raises EmailExistsError: Falls die Emailadresse bereits existiert
+    """
+    logger.debug("mitglied_model={}", mitglied_model)
+    mitglied_dto: Final = service.create(mitglied=mitglied_model.to_mitglied())
+    logger.debug("mitglied_dto={}", mitglied_dto)
+
+    background_tasks.add_task(send_mail, mitglied_dto)
+
+    return Response(
+        status_code=status.HTTP_201_CREATED,
+        headers={"Location": f"{request.url}/{mitglied_dto.id}"},
+        background=background_tasks,
+    )
 
 
 @mitglied_write_router.put(
