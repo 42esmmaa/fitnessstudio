@@ -6,6 +6,7 @@ from mitglied.service.exceptions import (
     NotFoundError,
     VersionOutdatedError,
 )
+from mitglied.service.mailer import send_mail
 from mitglied.service.mitglied_dto import MitgliedDTO
 from mitglied.service.mitglied_service import MitgliedService
 from mitglied.service.mitglied_write_service import MitgliedWriteService
@@ -20,4 +21,5 @@ __all__ = [
     "NotFoundError",
     "VersionOutdatedError",
     "VertragDTO",
+    "send_mail",
 ]

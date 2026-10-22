@@ -1,0 +1,45 @@
+# Mailpit nach dem Beispielprojekt des Dozenten.
+---
+services:
+  mail:
+    image: axllent/mailpit:v1.31.3
+    ports:
+      # SMTP
+      - published: 1025
+        target: 1025
+        protocol: tcp
+        host_ip: 127.0.0.1
+      # Web UI und REST-API
+      - published: 8025
+        target: 8025
+        protocol: tcp
+        host_ip: 127.0.0.1
+    volumes:
+      - mailpit:/data
+    environment:
+      TZ: Europe/Berlin
+      MP_DATABASE: /data/database.db
+      MP_MAX_MESSAGES: 50
+    hostname: mail
+    container_name: mail
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "1025"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    stop_grace_period: 5s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+volumes:
+  mailpit:
+    name: mailpit_fitnessstudio

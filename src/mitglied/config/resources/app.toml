@@ -20,6 +20,11 @@ client-id = "fitnessstudio-client"
 # Client Secret aus der Keycloak-Konsole lokal eintragen, siehe Keycloak-ReadMe.
 # client-secret = ""
 
+[mail]
+enabled = false
+host = "localhost"
+port = 1025
+
 [logger]
 debug-level = true
 
