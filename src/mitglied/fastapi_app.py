@@ -14,7 +14,7 @@ from mitglied.problem_details import ProblemDetails
 from mitglied.repository import engine
 from mitglied.router import mitglied_router
 from mitglied.security import AuthorizationError, LoginError, router as auth_router
-from mitglied.service import NotFoundError
+from mitglied.service import ForbiddenError, NotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -64,6 +64,17 @@ def authorization_error_handler(
     :rtype: Response
     """
     return ProblemDetails.create(status_code=status.HTTP_401_UNAUTHORIZED).to_response()
+
+
+@app.exception_handler(ForbiddenError)
+def forbidden_error_handler(_request: Request, _err: ForbiddenError) -> Response:
+    """Errorhandler für ForbiddenError.
+
+    :param _err: ForbiddenError vom Überprüfen der erforderlichen Berechtigungen
+    :return: Response mit Statuscode 403
+    :rtype: Response
+    """
+    return ProblemDetails.create(status_code=status.HTTP_403_FORBIDDEN).to_response()
 
 
 @app.exception_handler(LoginError)

@@ -14,7 +14,13 @@ from mitglied.repository import Slice
 from mitglied.router.dependencies import get_service
 from mitglied.security import AuthorizationError, Role, TokenService, User
 from mitglied.security.dependencies import get_token_service
-from mitglied.service import MitgliedDTO, MitgliedService, NotFoundError, VertragDTO
+from mitglied.service import (
+    ForbiddenError,
+    MitgliedDTO,
+    MitgliedService,
+    NotFoundError,
+    VertragDTO,
+)
 
 
 @pytest.fixture
@@ -163,3 +169,63 @@ def test_suche_ohne_gueltigen_token(client, service, token_service, methode) -> 
     )
     assert response.status_code == HTTPStatus.UNAUTHORIZED
     service.find.assert_not_called()
+
+
+@pytest.mark.parametrize("rolle", [Role.ADMIN, Role.MITGLIED])
+def test_id_suche_liefert_etag(client, service, token_service, rolle) -> None:
+    user = User(
+        username="alex",
+        email="alex@example.org",
+        vorname="Alex",
+        nachname="Muster",
+        roles=[rolle],
+    )
+    token_service.get_user_from_request.return_value = user
+    service.find_by_id.return_value = service.find.return_value.content[0]
+    response = client.get("/rest/1000")
+    assert response.status_code == HTTPStatus.OK
+    assert response.headers["etag"] == '"1"'
+    assert response.json()["email"] == "alex@example.org"
+    service.find_by_id.assert_called_once_with(mitglied_id=1000, user=user)
+
+
+@pytest.mark.parametrize(
+    ("etag", "erwartet"),
+    [
+        ('"1"', HTTPStatus.NOT_MODIFIED),
+        ('"2"', HTTPStatus.OK),
+        ('"ungueltig"', HTTPStatus.OK),
+        ("1", HTTPStatus.OK),
+    ],
+)
+def test_id_suche_if_none_match(client, service, etag, erwartet) -> None:
+    service.find_by_id.return_value = service.find.return_value.content[0]
+    response = client.get("/rest/1000", headers={"If-None-Match": etag})
+    assert response.status_code == erwartet
+    if erwartet == HTTPStatus.NOT_MODIFIED:
+        assert response.content == b""
+
+
+@pytest.mark.parametrize(
+    ("fehler", "erwartet"),
+    [(NotFoundError, HTTPStatus.NOT_FOUND), (ForbiddenError, HTTPStatus.FORBIDDEN)],
+)
+def test_id_suche_service_fehler(client, service, fehler, erwartet) -> None:
+    service.find_by_id.side_effect = fehler
+    response = client.get("/rest/1000")
+    assert response.status_code == erwartet
+    assert response.headers["content-type"] == "application/problem+json"
+
+
+def test_id_suche_ohne_gueltigen_token(client, service, token_service) -> None:
+    token_service.get_user_from_request.side_effect = AuthorizationError
+    response = client.get("/rest/1000")
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    service.find_by_id.assert_not_called()
+
+
+def test_id_suche_ohne_rolle(client, service, token_service) -> None:
+    token_service.get_user_from_request.return_value.roles.clear()
+    response = client.get("/rest/1000")
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    service.find_by_id.assert_not_called()
