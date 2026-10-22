@@ -39,4 +39,3 @@ else:
     logger.add(LOG_FILE, rotation="1 MB", level="INFO")
 
 logger.info("Logging ist konfiguriert")
-logger.debug("config: app_config={}", app_config)

@@ -12,6 +12,14 @@ host = "localhost"
 # SQL-Anweisungen protokollieren (für Lasttests ausschalten)
 log-statements = true
 
+[keycloak]
+host = "localhost"
+port = 8843
+realm = "fitnessstudio"
+client-id = "fitnessstudio-client"
+# Client Secret aus der Keycloak-Konsole lokal eintragen, siehe Keycloak-ReadMe.
+# client-secret = ""
+
 [logger]
 debug-level = true
 

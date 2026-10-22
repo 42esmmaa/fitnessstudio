@@ -7,6 +7,7 @@ from mitglied.config.db import (
     db_url_admin,
 )
 from mitglied.config.dev_modus import dev_db_populate
+from mitglied.config.keycloak import keycloak_config
 
 __all__ = [
     "db_connect_args",
@@ -14,4 +15,5 @@ __all__ = [
     "db_url",
     "db_url_admin",
     "dev_db_populate",
+    "keycloak_config",
 ]
