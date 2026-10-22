@@ -5,7 +5,7 @@ from typing import Final
 
 from mitglied.config.config import app_config
 
-__all__ = ["keycloak_config"]
+__all__ = ["keycloak_admin_config", "keycloak_config"]
 
 
 @dataclass(frozen=True, eq=False, slots=True)
@@ -17,6 +17,14 @@ class KeycloakConfig:
     client_id: str
     client_secret_key: str = field(repr=False)
     verify: bool = False
+
+
+@dataclass(frozen=True, eq=False, slots=True, kw_only=True)
+class KeycloakAdminConfig(KeycloakConfig):
+    """Konfigurationsdaten für die Keycloak-Administration."""
+
+    username: str
+    password: str = field(repr=False)
 
 
 _keycloak_toml: Final = app_config.get("keycloak", {})
@@ -38,3 +46,18 @@ keycloak_config = KeycloakConfig(
     verify=False,
 )
 """Schnittstelle zu Keycloak durch _python-keycloak_."""
+
+
+_admin: Final[str] = _keycloak_toml.get("admin", "admin")
+_admin_password: Final[str] = _keycloak_toml.get("admin-password", "")
+
+keycloak_admin_config = KeycloakAdminConfig(
+    server_url=_url,
+    username=_admin,
+    password=_admin_password,
+    realm_name=_realm,
+    client_id=_client_id,
+    client_secret_key=_client_secret,
+    verify=False,
+)
+"""Administrations-Schnittstelle zu Keycloak durch _python-keycloak_."""

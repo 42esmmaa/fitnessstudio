@@ -19,6 +19,9 @@ realm = "fitnessstudio"
 client-id = "fitnessstudio-client"
 # Client Secret aus der Keycloak-Konsole lokal eintragen, siehe Keycloak-ReadMe.
 # client-secret = ""
+# Administrativer Benutzer im Realm fitnessstudio; Zugangsdaten nur lokal eintragen.
+# admin = "admin"
+# admin-password = ""
 
 [mail]
 enabled = false

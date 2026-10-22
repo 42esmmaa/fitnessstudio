@@ -7,6 +7,7 @@ from mitglied.security.role import Role
 from mitglied.security.roles_required import RolesRequired
 from mitglied.security.token_service import TokenService
 from mitglied.security.user import User
+from mitglied.security.user_service import UserService
 
 __all__ = [
     "AuthorizationError",
@@ -16,6 +17,7 @@ __all__ = [
     "RolesRequired",
     "TokenService",
     "User",
+    "UserService",
     "router",
     "token",
 ]
