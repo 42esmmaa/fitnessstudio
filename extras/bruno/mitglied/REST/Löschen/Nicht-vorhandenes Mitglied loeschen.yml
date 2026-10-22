@@ -1,0 +1,21 @@
+info:
+  name: "Nicht-vorhandenes Mitglied loeschen"
+  type: http
+  seq: 2
+
+http:
+  method: DELETE
+  url: "{{restUrl}}/999999"
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "204"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

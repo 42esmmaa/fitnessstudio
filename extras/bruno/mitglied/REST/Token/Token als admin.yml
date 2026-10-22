@@ -1,0 +1,30 @@
+info:
+  name: "Token als admin"
+  type: http
+  seq: 1
+
+http:
+  method: QUERY
+  url: "{{tokenUrl}}"
+  body:
+    type: json
+    data: |-
+      {
+        "username": "{{username}}",
+        "password": "{{password}}"
+      }
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.body.rollen[0]
+      operator: eq
+      value: "ADMIN"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

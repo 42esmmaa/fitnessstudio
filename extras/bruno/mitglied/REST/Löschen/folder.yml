@@ -1,0 +1,24 @@
+info:
+  name: "Löschen"
+  type: folder
+  seq: 7
+
+request:
+  auth:
+    type: bearer
+    token: "{{TOKEN}}"
+  scripts:
+    - type: before-request
+      code: |-
+        const tokenUrl = bru.getCollectionVar('tokenUrl');
+        const username = bru.getEnvVar('username');
+        const password = bru.getEnvVar('password');
+        const response = await bru.sendRequest({
+          method: 'QUERY',
+          url: tokenUrl,
+          data: { username, password },
+        });
+        if (response.status !== 200) {
+          throw new Error('Login fehlgeschlagen: ' + response.status);
+        }
+        bru.setVar('TOKEN', response.data.token);

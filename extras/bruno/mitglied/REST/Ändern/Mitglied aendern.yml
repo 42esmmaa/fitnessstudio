@@ -1,0 +1,42 @@
+info:
+  name: "Mitglied aendern"
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{mitgliedUrl}}"
+  headers:
+    - name: "If-Match"
+      value: "{{VERSION}}"
+  body:
+    type: json
+    data: |-
+      {
+        "vorname": "Geaendert",
+        "nachname": "Testrest",
+        "email": "{{testEmail}}",
+        "geburtsdatum": "2000-01-01",
+        "geschlecht": "D",
+        "interessen": [
+          "Yoga"
+        ]
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        bru.setVar('previousVersion', bru.getVar('VERSION'));
+        bru.setVar('VERSION', res.getHeaders()['etag']);
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "204"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

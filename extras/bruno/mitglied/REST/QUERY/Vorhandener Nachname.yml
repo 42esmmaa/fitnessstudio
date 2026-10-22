@@ -1,0 +1,32 @@
+info:
+  name: "Vorhandener Nachname"
+  type: http
+  seq: 1
+
+http:
+  method: QUERY
+  url: "{{restUrl}}/query"
+  body:
+    type: json
+    data: |-
+      {
+        "nachname": "Alpha",
+        "page": 0,
+        "size": 5
+      }
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.body.content[0].nachname
+      operator: eq
+      value: "Alpha"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,25 @@
+info:
+  name: "Nicht-vorhandene ID"
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{restUrl}}/:id"
+  params:
+    - name: "id"
+      value: "999999"
+      type: path
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "404"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

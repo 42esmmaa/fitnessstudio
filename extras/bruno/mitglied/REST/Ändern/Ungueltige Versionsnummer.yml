@@ -1,0 +1,37 @@
+info:
+  name: "Ungueltige Versionsnummer"
+  type: http
+  seq: 5
+
+http:
+  method: PUT
+  url: "{{mitgliedUrl}}"
+  headers:
+    - name: "If-Match"
+      value: "\"ungueltig\""
+  body:
+    type: json
+    data: |-
+      {
+        "vorname": "Geaendert",
+        "nachname": "Testrest",
+        "email": "{{testEmail}}",
+        "geburtsdatum": "2000-01-01",
+        "geschlecht": "D",
+        "interessen": [
+          "Yoga"
+        ]
+      }
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "412"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

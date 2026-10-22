@@ -1,0 +1,21 @@
+info:
+  name: "Angelegtes Mitglied loeschen"
+  type: http
+  seq: 1
+
+http:
+  method: DELETE
+  url: "{{mitgliedUrl}}"
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "204"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

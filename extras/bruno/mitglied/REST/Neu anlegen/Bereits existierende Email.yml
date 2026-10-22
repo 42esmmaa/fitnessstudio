@@ -1,0 +1,46 @@
+info:
+  name: "Bereits existierende Email"
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{restUrl}}"
+  body:
+    type: json
+    data: |-
+      {
+        "vorname": "Bruno",
+        "nachname": "Testrest",
+        "email": "{{testEmail}}",
+        "geburtsdatum": "2000-01-01",
+        "geschlecht": "D",
+        "interessen": [
+          "Yoga"
+        ],
+        "vertrag": {
+          "beginn": "2026-10-01",
+          "monatlicher_beitrag": "29.90",
+          "tarif": "STUDENT",
+          "getraenkeflat": true
+        },
+        "zahlungen": [
+          {
+            "betrag": "29.90",
+            "zahlungsdatum": "2026-10-01"
+          }
+        ]
+      }
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "422"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5
