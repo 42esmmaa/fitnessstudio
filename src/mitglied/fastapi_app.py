@@ -12,7 +12,9 @@ from mitglied.config.dev.db_populate import db_populate
 from mitglied.config.dev.db_populate_router import router as db_populate_router
 from mitglied.problem_details import ProblemDetails
 from mitglied.repository import engine
+from mitglied.router import mitglied_router
 from mitglied.security import AuthorizationError, LoginError, router as auth_router
+from mitglied.service import NotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -36,6 +38,18 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
 app: Final = FastAPI(title="Fitnessstudio", version=__version__, lifespan=lifespan)
 
 app.include_router(auth_router, prefix="/auth")
+app.include_router(mitglied_router, prefix="/rest")
+
+
+@app.exception_handler(NotFoundError)
+def not_found_error_handler(_request: Request, _err: NotFoundError) -> Response:
+    """Errorhandler für NotFoundError.
+
+    :param _err: NotFoundError aus der Geschäftslogik
+    :return: Response mit Statuscode 404
+    :rtype: Response
+    """
+    return ProblemDetails.create(status_code=status.HTTP_404_NOT_FOUND).to_response()
 
 
 @app.exception_handler(AuthorizationError)
