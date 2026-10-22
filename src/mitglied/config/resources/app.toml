@@ -17,11 +17,8 @@ host = "localhost"
 port = 8843
 realm = "fitnessstudio"
 client-id = "fitnessstudio-client"
-# Client Secret aus der Keycloak-Konsole lokal eintragen, siehe Keycloak-ReadMe.
-# client-secret = ""
-# Administrativer Benutzer im Realm fitnessstudio; Zugangsdaten nur lokal eintragen.
-# admin = "admin"
-# admin-password = ""
+# Client Secret und Admin-Zugangsdaten in der lokalen .env eintragen.
+# Variablennamen stehen in .env.example; echte Zugangsdaten nicht committen.
 
 [mail]
 enabled = false

@@ -1,6 +1,7 @@
 """Konfiguration für _python-keycloak_ zum Zugriff auf _Keycloak_."""
 
 from dataclasses import dataclass, field
+from os import getenv
 from typing import Final
 
 from mitglied.config.config import app_config
@@ -36,7 +37,9 @@ _url: Final = f"{_schema}://{_host}:{_port}/"
 
 _realm: Final[str] = _keycloak_toml.get("realm", "fitnessstudio")
 _client_id: Final[str] = _keycloak_toml.get("client-id", "fitnessstudio-client")
-_client_secret: Final[str] = _keycloak_toml.get("client-secret", "")
+_client_secret: Final[str] = getenv(
+    "KEYCLOAK_CLIENT_SECRET", _keycloak_toml.get("client-secret", "")
+)
 
 keycloak_config = KeycloakConfig(
     server_url=_url,
@@ -48,8 +51,12 @@ keycloak_config = KeycloakConfig(
 """Schnittstelle zu Keycloak durch _python-keycloak_."""
 
 
-_admin: Final[str] = _keycloak_toml.get("admin", "admin")
-_admin_password: Final[str] = _keycloak_toml.get("admin-password", "")
+_admin: Final[str] = getenv(
+    "KEYCLOAK_ADMIN_USERNAME", _keycloak_toml.get("admin", "admin")
+)
+_admin_password: Final[str] = getenv(
+    "KEYCLOAK_ADMIN_PASSWORD", _keycloak_toml.get("admin-password", "")
+)
 
 keycloak_admin_config = KeycloakAdminConfig(
     server_url=_url,
