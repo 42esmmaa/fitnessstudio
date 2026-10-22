@@ -339,6 +339,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-html" },
+    { name = "requests" },
 ]
 lint = [
     { name = "ruff" },
@@ -365,6 +366,7 @@ dev = [
     { name = "pytest", specifier = ">=9.1.1,<10.0.0" },
     { name = "pytest-cov", specifier = ">=7.1.0,<8.0.0" },
     { name = "pytest-html", specifier = ">=4.2.0,<5.0.0" },
+    { name = "requests", specifier = ">=2.34.2,<3.0.0" },
 ]
 lint = [
     { name = "ruff", specifier = ">=0.16.10,<1.0.0" },

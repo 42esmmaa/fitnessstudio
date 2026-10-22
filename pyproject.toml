@@ -116,6 +116,8 @@ dev = [
     "pytest-cov>=7.1.0,<8.0.0",
     # https://github.com/pytest-dev/pytest-html Testbericht (Option --html)
     "pytest-html>=4.2.0,<5.0.0",
+    # HTTP-Integrationstests gegen den laufenden Server wie in der Vorlage
+    "requests>=2.34.2,<3.0.0",
 ]
 lint = [
     # https://docs.astral.sh/ruff Codeanalyse und Formatierung
