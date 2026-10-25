@@ -10,6 +10,7 @@ from mitglied.__about__ import __version__
 from mitglied.config import dev_db_populate
 from mitglied.config.dev.db_populate import db_populate
 from mitglied.config.dev.db_populate_router import router as db_populate_router
+from mitglied.graphql_api import graphql_router
 from mitglied.problem_details import ProblemDetails
 from mitglied.repository import engine
 from mitglied.router import mitglied_router, mitglied_write_router
@@ -45,6 +46,7 @@ app: Final = FastAPI(title="Fitnessstudio", version=__version__, lifespan=lifesp
 app.include_router(auth_router, prefix="/auth")
 app.include_router(mitglied_router, prefix="/rest")
 app.include_router(mitglied_write_router, prefix="/rest")
+app.include_router(graphql_router, prefix="/graphql")
 
 
 @app.exception_handler(NotFoundError)

@@ -25,6 +25,9 @@ enabled = true
 host = "localhost"
 port = 1025
 
+[graphql]
+graphiql-enabled = true
+
 [logger]
 debug-level = true
 
