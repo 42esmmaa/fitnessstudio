@@ -1,0 +1,6 @@
+# Backend-Dienste wie in der Dozentenvorlage zusammenfassen.
+---
+include:
+  # Keycloak bindet PostgreSQL bereits ein.
+  - path: ../keycloak/compose.yml
+  - path: ../mailpit/compose.yml

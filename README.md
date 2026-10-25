@@ -18,6 +18,7 @@ _Software Engineering_ an der Hochschule Karlsruhe.
 - [Datenbank (PostgreSQL)](#datenbank-postgresql)
 - [Keycloak](#keycloak)
 - [Installation und Start](#installation-und-start)
+- [Docker und CI](#docker-und-ci)
 - [Codeanalyse, Formatierung, Typprüfung und Tests](#codeanalyse-formatierung-typprüfung-und-tests)
 - [Endpunkte](#endpunkte)
 - [Projektstruktur](#projektstruktur)
@@ -125,6 +126,32 @@ uv run fastapi dev
 Danach ist der Server unter <http://127.0.0.1:8000> erreichbar. Die
 automatisch erzeugte API-Dokumentation von FastAPI gibt es unter
 <http://127.0.0.1:8000/docs>.
+
+## Docker und CI
+
+Das `Dockerfile` folgt der Variante `Dockerfile.trixie` aus der Dozentenvorlage:
+Python 3.15, Installation mit uv in einer Build-Stufe und Ausführung als Benutzer
+`app` in einem separaten Laufzeit-Image.
+
+Die lokale `.env` mit den eingerichteten Zugangsdaten wird auch hier benötigt.
+Bereits separat gestartete Backend-Container vorher über ihre jeweilige
+Compose-Konfiguration mit `down` ohne `-v` beenden, damit Namen und Ports frei sind.
+
+```powershell
+docker compose -p fitnessstudio -f extras/compose/mitglied/compose.yml up --build -d
+docker compose -p fitnessstudio -f extras/compose/mitglied/compose.yml logs -f mitglied
+docker compose -p fitnessstudio -f extras/compose/mitglied/compose.yml down
+```
+
+Die Anwendung ist unter <http://127.0.0.1:8000> erreichbar. Die Container-Konfiguration
+steht in `extras/compose/mitglied/app.toml`. Wie in der Dozentenvorlage lädt
+`db-populate = true` bei jedem Appstart die Mitgliedstabellen mit den Testdaten neu.
+Für den Erhalt vorhandener Mitgliedsdaten nach der ersten Initialisierung auf
+`false` setzen.
+
+Der Workflow `.github/workflows/ci.yml` führt bei Push und Pull Request Ruff,
+Typprüfung und die Unit-Tests mit Coverage aus und baut das Docker-Image.
+Die Integrationstests benötigen separat laufende Dienste.
 
 ## Codeanalyse, Formatierung, Typprüfung und Tests
 

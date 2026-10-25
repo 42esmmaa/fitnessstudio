@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruefung:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: uv und Python einrichten
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.12.20"
+          python-version: "3.15.0rc2"
+          enable-cache: true
+      - name: Abhaengigkeiten installieren
+        run: uv sync --frozen
+      - name: Codeanalyse
+        run: uv run --frozen ruff check src tests
+      - name: Formatierung pruefen
+        run: uv run --frozen ruff format --check src tests
+      - name: Typpruefung
+        run: uv run --frozen ty check
+      - name: Unit-Tests mit Coverage
+        run: uv run --frozen pytest tests/unit/mitglied
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Docker-Image bauen
+        run: docker build --tag fitnessstudio/mitglied:2026.10.1-trixie .

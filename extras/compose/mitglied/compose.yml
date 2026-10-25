@@ -1,0 +1,40 @@
+# Aufruf im Projektverzeichnis:
+# docker compose -p fitnessstudio -f extras/compose/mitglied/compose.yml up --build -d
+---
+include:
+  - path: ../backend/compose.yml
+
+services:
+  mitglied:
+    image: fitnessstudio/mitglied:2026.10.1-trixie
+    build:
+      context: ../../..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mail:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    stop_signal: SIGINT
+    ports:
+      - published: 8000
+        target: 8000
+        host_ip: 127.0.0.1
+    volumes:
+      - type: bind
+        source: app.toml
+        target: /opt/app/.venv/lib/python3.15/site-packages/mitglied/config/resources/app.toml
+        read_only: true
+    env_file: ../../../.env
+    hostname: mitglied
+    cap_drop: [ALL]
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "1.0"
+          memory: 1G

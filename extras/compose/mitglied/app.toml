@@ -1,0 +1,28 @@
+# Konfiguration für den Appserver im Docker-Container.
+
+[server]
+host-binding = "0.0.0.0"
+
+[db]
+host = "postgres"
+log-statements = true
+
+[keycloak]
+host = "keycloak"
+port = 8443
+realm = "fitnessstudio"
+client-id = "fitnessstudio-client"
+
+[mail]
+enabled = true
+host = "mail"
+port = 1025
+
+[graphql]
+graphiql-enabled = true
+
+[logger]
+debug-level = false
+
+[dev]
+db-populate = true
