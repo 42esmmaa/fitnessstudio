@@ -78,7 +78,7 @@ Die Tabellen legt der **Appserver** an: Ist in
 `src/mitglied/config/resources/app.toml` `db-populate = true` gesetzt, führt er
 beim Start `drop.sql` und `create.sql` aus und lädt danach die CSV-Dateien aus
 `extras/compose/postgres/init/mitglied/csv` per `COPY` in die Tabellen.
-Im laufenden Betrieb geht das auch mit `POST /dev/db_populate`.
+Im laufenden Betrieb geht das auch mit `QUERY /dev/db_populate` (Admin-Token erforderlich).
 
 Im selben Container liegt auch die Datenbank `keycloak` für Keycloak
 (Skript `create-keycloak-db.sh`, siehe [Keycloak](#keycloak)).
@@ -146,7 +146,7 @@ Die Konfiguration aller Werkzeuge steht in `pyproject.toml`.
 | Methode | Pfad | Beschreibung                                  |
 | ------- | ---- | --------------------------------------------- |
 | GET     | `/`  | Liefert `{"message": "Hello Fitnessstudio"}` |
-| POST    | `/dev/db_populate` | DB mit den Testdaten neu laden (nur im dev-Modus) |
+| QUERY   | `/dev/db_populate` | DB mit den Testdaten neu laden (nur im dev-Modus, nur als Admin) |
 
 ## Projektstruktur
 

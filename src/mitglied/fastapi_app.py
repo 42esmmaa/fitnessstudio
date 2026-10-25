@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Final
 
 from fastapi import FastAPI, Request, Response, status
+from fastapi.middleware.gzip import GZipMiddleware
 from loguru import logger
 
 from mitglied.__about__ import __version__
@@ -14,7 +15,12 @@ from mitglied.graphql_api import graphql_router
 from mitglied.problem_details import ProblemDetails
 from mitglied.repository import engine
 from mitglied.router import mitglied_router, mitglied_write_router
-from mitglied.security import AuthorizationError, LoginError, router as auth_router
+from mitglied.security import (
+    AuthorizationError,
+    LoginError,
+    router as auth_router,
+    set_response_headers,
+)
 from mitglied.service import (
     EmailExistsError,
     ForbiddenError,
@@ -23,7 +29,7 @@ from mitglied.service import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Awaitable, Callable
 
 __all__ = ["app"]
 
@@ -42,6 +48,25 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
 
 
 app: Final = FastAPI(title="Fitnessstudio", version=__version__, lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
+
+@app.middleware("http")
+async def add_security_headers(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    """Header-Daten beim Response für IT-Sicherheit setzen.
+
+    :param request: Injiziertes Request-Objekt, das zunächst fertig verarbeitet wird
+    :param call_next: nächste aufzurufende Middleware
+    :return: Response-Objekt mit zusätzlichen Header-Daten
+    :rtype: Response
+    """
+    response: Final[Response] = await call_next(request)
+    set_response_headers(response)
+    return response
+
 
 app.include_router(auth_router, prefix="/auth")
 app.include_router(mitglied_router, prefix="/rest")
