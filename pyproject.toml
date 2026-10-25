@@ -139,7 +139,7 @@ entrypoint = "mitglied:app"
 [tool.pytest]
 minversion = "9.1"
 pythonpath = ["src"]
-testpaths = ["tests"]
+testpaths = ["tests/unit/mitglied", "tests/integration"]
 # --html erfordert pytest-html, --cov erfordert pytest-cov
 addopts = ["--html=report.html", "--cov", "--cov-report=html"]
 markers = [
