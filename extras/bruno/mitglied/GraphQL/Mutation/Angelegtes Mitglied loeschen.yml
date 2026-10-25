@@ -1,0 +1,23 @@
+info:
+  name: Angelegtes Mitglied loeschen
+  type: http
+  seq: 4
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/rest/{{graphqlMitgliedId}}"
+  auth:
+    type: bearer
+    token: "{{TOKEN}}"
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "204"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

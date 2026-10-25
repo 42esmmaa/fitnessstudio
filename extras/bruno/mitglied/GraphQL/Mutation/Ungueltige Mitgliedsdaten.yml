@@ -1,0 +1,66 @@
+info:
+  name: "Ungueltige Mitgliedsdaten"
+  type: graphql
+  seq: 2
+
+graphql:
+  method: POST
+  url: "{{graphqlUrl}}"
+  body:
+    query: |-
+      mutation($input: MitgliedInput!) {
+        create(mitgliedInput: $input) {
+          id
+        }
+      }
+    variables: |-
+      {
+        "input": {
+          "vorname": "Bruno",
+          "nachname": "falscher_nachname",
+          "email": "falsche_email@",
+          "geburtsdatum": "2000-01-01",
+          "geschlecht": "DIVERS",
+          "vertrag": {
+            "beginn": "2026-10-01",
+            "monatlicherBeitrag": "29.90",
+            "tarif": "STUDENT",
+            "getraenkeflat": true
+          },
+          "zahlungen": [
+            {
+              "betrag": "29.90",
+              "zahlungsdatum": "2026-10-01"
+            }
+          ]
+        }
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test('Pydantic validiert Nachname und Emailadresse', () => {
+          const fields = res.getBody().errors[0].extensions.validation_errors.map(error => error.field);
+          expect(fields.some(field => field.includes('nachname'))).to.be.true;
+          expect(fields.some(field => field.includes('email'))).to.be.true;
+        });
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.headers['content-type']
+      operator: eq
+      value: "application/json"
+    - expression: res.body.errors[0].path[0]
+      operator: eq
+      value: "create"
+    - expression: res.body.errors[0].extensions.validation_errors
+      operator: isArray
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

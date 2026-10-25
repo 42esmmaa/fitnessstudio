@@ -1,0 +1,68 @@
+info:
+  name: "Fremde ID als Mitglied"
+  type: graphql
+  seq: 10
+
+graphql:
+  method: POST
+  url: "{{graphqlUrl}}"
+  body:
+    query: |-
+      query($mitgliedId: ID!) {
+        mitglied(mitgliedId: $mitgliedId) {
+          id
+          version
+          vorname
+          nachname
+          email
+          geburtsdatum
+          geschlecht
+          interessen
+          vertrag {
+            beginn
+            monatlicherBeitrag
+            tarif
+            getraenkeflat
+          }
+        }
+      }
+    variables: |-
+      {
+        "mitgliedId": "30"
+      }
+  auth:
+    type: bearer
+    token: "{{MITGLIED_TOKEN}}"
+
+runtime:
+  scripts:
+    - type: before-request
+      code: |-
+        const response = await bru.sendRequest({
+          method: 'QUERY',
+          url: bru.getCollectionVar('tokenUrl'),
+          data: { username: 'alice', password: bru.getEnvVar('password') },
+        });
+        if (response.status !== 200) throw new Error('Login als alice fehlgeschlagen');
+        if (!response.data.rollen.includes('MITGLIED') || response.data.rollen.includes('ADMIN')) {
+          throw new Error('alice muss ausschließlich Mitgliedsrechte haben');
+        }
+        bru.setVar('MITGLIED_TOKEN', response.data.token);
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.headers['content-type']
+      operator: eq
+      value: "application/json"
+    - expression: res.body.errors[0].path[0]
+      operator: eq
+      value: "mitglied"
+    - expression: res.body.data.mitglied
+      operator: isNull
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

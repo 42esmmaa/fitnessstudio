@@ -1,0 +1,63 @@
+info:
+  name: "Vorhandener Nachname"
+  type: graphql
+  seq: 4
+
+graphql:
+  method: POST
+  url: "{{graphqlUrl}}"
+  body:
+    query: |-
+      query($suchparameter: Suchparameter) {
+        mitglieder(suchparameter: $suchparameter) {
+          id
+          version
+          vorname
+          nachname
+          email
+          geburtsdatum
+          geschlecht
+          interessen
+          vertrag {
+            beginn
+            monatlicherBeitrag
+            tarif
+            getraenkeflat
+          }
+        }
+      }
+    variables: |-
+      {
+        "suchparameter": {
+          "nachname": "Alpha"
+        }
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test('Alle Treffer enthalten den gesuchten Nachnamen', () => {
+          res.getBody().data.mitglieder.forEach(mitglied => {
+            expect(mitglied.nachname.toLowerCase()).to.include('alpha');
+          });
+        });
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.headers['content-type']
+      operator: eq
+      value: "application/json"
+    - expression: res.body.data.mitglieder[0].nachname
+      operator: eq
+      value: "Alpha"
+    - expression: res.body.data.mitglieder
+      operator: isNotEmpty
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,52 @@
+info:
+  name: "Vorhandene ID ohne Token"
+  type: graphql
+  seq: 8
+
+graphql:
+  method: POST
+  url: "{{graphqlUrl}}"
+  body:
+    query: |-
+      query($mitgliedId: ID!) {
+        mitglied(mitgliedId: $mitgliedId) {
+          id
+          version
+          vorname
+          nachname
+          email
+          geburtsdatum
+          geschlecht
+          interessen
+          vertrag {
+            beginn
+            monatlicherBeitrag
+            tarif
+            getraenkeflat
+          }
+        }
+      }
+    variables: |-
+      {
+        "mitgliedId": "20"
+      }
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.headers['content-type']
+      operator: eq
+      value: "application/json"
+    - expression: res.body.errors[0].path[0]
+      operator: eq
+      value: "mitglied"
+    - expression: res.body.data.mitglied
+      operator: isNull
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,45 @@
+info:
+  name: "Login mit falschem Passwort"
+  type: graphql
+  seq: 2
+
+graphql:
+  method: POST
+  url: "{{graphqlUrl}}"
+  body:
+    query: |-
+      mutation($username: String!, $password: String!) {
+        login(username: $username, password: $password) {
+          token
+          expiresIn
+          roles
+        }
+      }
+    variables: |-
+      {
+        "username": "{{username}}",
+        "password": "FALSCH"
+      }
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.headers['content-type']
+      operator: eq
+      value: "application/json"
+    - expression: res.body.errors
+      operator: isArray
+    - expression: res.body.errors[0].path[0]
+      operator: eq
+      value: "login"
+    - expression: res.body.data
+      operator: isNull
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

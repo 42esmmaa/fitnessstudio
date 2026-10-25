@@ -1,0 +1,51 @@
+info:
+  name: "Vorhandene ID 20"
+  type: graphql
+  seq: 1
+
+graphql:
+  method: POST
+  url: "{{graphqlUrl}}"
+  body:
+    query: |-
+      query($mitgliedId: ID!) {
+        mitglied(mitgliedId: $mitgliedId) {
+          id
+          version
+          vorname
+          nachname
+          email
+          geburtsdatum
+          geschlecht
+          interessen
+          vertrag {
+            beginn
+            monatlicherBeitrag
+            tarif
+            getraenkeflat
+          }
+        }
+      }
+    variables: |-
+      {
+        "mitgliedId": "20"
+      }
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.headers['content-type']
+      operator: eq
+      value: "application/json"
+    - expression: res.body.data.mitglied.email
+      operator: eq
+      value: "alice@fitnessstudio.de"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

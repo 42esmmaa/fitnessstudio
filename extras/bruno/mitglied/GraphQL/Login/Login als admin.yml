@@ -1,0 +1,50 @@
+info:
+  name: "Login als admin"
+  type: graphql
+  seq: 1
+
+graphql:
+  method: POST
+  url: "{{graphqlUrl}}"
+  body:
+    query: |-
+      mutation($username: String!, $password: String!) {
+        login(username: $username, password: $password) {
+          token
+          expiresIn
+          roles
+        }
+      }
+    variables: |-
+      {
+        "username": "{{username}}",
+        "password": "{{password}}"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test('Tokenlaufzeit ist positiv', () => {
+          expect(Number(res.getBody().data.login.expiresIn)).to.be.greaterThan(0);
+        });
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.headers['content-type']
+      operator: eq
+      value: "application/json"
+    - expression: res.body.data.login.roles[0]
+      operator: eq
+      value: "ADMIN"
+    - expression: res.body.data.login.token
+      operator: matches
+      value: ".+\\..+\\..+"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

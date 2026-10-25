@@ -1,0 +1,66 @@
+info:
+  name: "Alle Mitglieder"
+  type: graphql
+  seq: 3
+
+graphql:
+  method: POST
+  url: "{{graphqlUrl}}"
+  body:
+    query: |-
+      query($suchparameter: Suchparameter) {
+        mitglieder(suchparameter: $suchparameter) {
+          id
+          version
+          vorname
+          nachname
+          email
+          geburtsdatum
+          geschlecht
+          interessen
+          vertrag {
+            beginn
+            monatlicherBeitrag
+            tarif
+            getraenkeflat
+          }
+        }
+      }
+    variables: |-
+      {
+        "suchparameter": null
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test('Mitgliedsdaten und optionale Felder', () => {
+          expect(res.getBody().errors).to.be.undefined;
+          res.getBody().data.mitglieder.forEach(mitglied => {
+            expect(mitglied.id).to.be.greaterThan(0);
+            expect(mitglied.version).to.be.at.least(0);
+            expect(mitglied.email).to.be.a('string').that.is.not.empty;
+            expect(mitglied.geschlecht).to.be.oneOf(['MAENNLICH', 'WEIBLICH', 'DIVERS']);
+            if (mitglied.interessen !== null) expect(mitglied.interessen).to.be.an('array');
+            if (mitglied.vertrag !== null) expect(mitglied.vertrag.tarif).to.be.oneOf(['BASIC', 'PREMIUM', 'STUDENT']);
+          });
+        });
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.headers['content-type']
+      operator: eq
+      value: "application/json"
+    - expression: res.body.data.mitglieder
+      operator: isArray
+    - expression: res.body.data.mitglieder
+      operator: isNotEmpty
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

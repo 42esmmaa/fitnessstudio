@@ -32,13 +32,12 @@ http:
         ]
       }
   auth: inherit
+
+runtime:
   scripts:
     - type: before-request
       code: |-
         bru.setVar('testEmail', bru.getEnvVar('testEmail') || ('bruno-' + Date.now() + '@example.org'));
-
-runtime:
-  scripts:
     - type: after-response
       code: |-
         bru.setVar('mitgliedUrl', res.getHeaders()['location']);

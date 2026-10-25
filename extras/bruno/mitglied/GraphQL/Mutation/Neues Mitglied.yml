@@ -1,0 +1,63 @@
+info:
+  name: "Neues Mitglied"
+  type: graphql
+  seq: 1
+
+graphql:
+  method: POST
+  url: "{{graphqlUrl}}"
+  body:
+    query: |-
+      mutation($input: MitgliedInput!) {
+        create(mitgliedInput: $input) {
+          id
+        }
+      }
+    variables: |-
+      {
+        "input": {
+          "vorname": "Bruno",
+          "nachname": "Testgraphql",
+          "email": "{{graphqlTestEmail}}",
+          "geburtsdatum": "2000-01-01",
+          "geschlecht": "DIVERS",
+          "vertrag": {
+            "beginn": "2026-10-01",
+            "monatlicherBeitrag": "29.90",
+            "tarif": "STUDENT",
+            "getraenkeflat": true
+          },
+          "zahlungen": [
+            {
+              "betrag": "29.90",
+              "zahlungsdatum": "2026-10-01"
+            }
+          ]
+        }
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: |-
+        bru.setVar('graphqlTestEmail', bru.getEnvVar('graphqlTestEmail') || ('bruno-graphql-' + Date.now() + '@example.org'));
+    - type: after-response
+      code: |-
+        if (res.getBody().data?.create) bru.setVar('graphqlMitgliedId', String(res.getBody().data.create.id));
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.headers['content-type']
+      operator: eq
+      value: "application/json"
+    - expression: res.body.data.create.id
+      operator: gte
+      value: "1000"
+
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5
