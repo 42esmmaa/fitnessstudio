@@ -1,0 +1,37 @@
+@startuml use-cases
+title Use Cases der Mitgliederverwaltung
+
+left to right direction
+skinparam actorStyle awesome
+
+actor "Interessent/in\n(ohne Login)" as gast
+actor "Mitglied\n(Rolle mitglied)" as mitglied
+actor "Administrator/in\n(Rolle admin)" as admin
+
+rectangle "Appserver mitglied" {
+  usecase "Als Mitglied registrieren\n(POST /rest, GraphQL create)" as UC1
+  usecase "Einloggen und Token erhalten\n(QUERY /auth/token, GraphQL login)" as UC2
+  usecase "Eigene Daten lesen\n(GET /rest/{id})" as UC3
+  usecase "Eigene Daten ändern\n(PUT /rest/{id} mit If-Match)" as UC4
+  usecase "Eigene Mitgliedschaft löschen\n(DELETE /rest/{id})" as UC5
+  usecase "Mitglieder suchen\n(GET /rest, QUERY /rest/query,\nGraphQL mitglieder)" as UC6
+  usecase "Beliebige Mitglieder lesen,\nändern und löschen" as UC7
+  usecase "Datenbank neu laden\n(QUERY /dev/db_populate)" as UC8
+}
+
+gast --> UC1
+gast --> UC2
+mitglied --> UC2
+mitglied --> UC3
+mitglied --> UC4
+mitglied --> UC5
+admin --> UC2
+admin --> UC6
+admin --> UC7
+admin --> UC8
+
+note right of UC1
+  Danach Mail an die Buchhaltung
+  (im Hintergrund)
+end note
+@enduml
