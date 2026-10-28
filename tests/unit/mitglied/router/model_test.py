@@ -130,6 +130,12 @@ def test_mitglied_update_model_to_mitglied(mitglied_daten, interessen) -> None:
     assert mitglied.zahlungen == []
 
 
+@pytest.mark.parametrize("nachname", ["Müller", "Müller-Lüdenscheidt", "Öz-Ak"])
+def test_mitglied_update_model_gueltige_nachnamen(mitglied_daten, nachname) -> None:
+    mitglied_daten["nachname"] = nachname
+    assert MitgliedUpdateModel.model_validate(mitglied_daten).nachname == nachname
+
+
 def test_mitglied_model_mit_vertrag_und_zahlungen(mitglied_daten) -> None:
     mitglied_daten["vertrag"] = {
         "beginn": "2026-10-01",
@@ -163,7 +169,13 @@ def test_mitglied_model_ohne_optionale_felder(mitglied_daten) -> None:
     ("feld", "wert", "fehlertyp"),
     [
         ("vorname", "A" * 65, "string_too_long"),
+        ("vorname", "", "string_too_short"),
         ("nachname", "muster", "string_pattern_mismatch"),
+        ("nachname", "Muster-L", "string_pattern_mismatch"),
+        ("geburtsdatum", "2999-01-01", "date_past"),
+        ("interessen", [""], "string_too_short"),
+        ("interessen", ["X" * 33], "string_too_long"),
+        ("interessen", ["Yoga"] * 21, "too_long"),
         ("email", "keine-email", "value_error"),
         ("geburtsdatum", "2000-13-01", "date_from_datetime_parsing"),
         ("geschlecht", "UNBEKANNT", "enum"),
@@ -211,7 +223,8 @@ def test_mitglied_find_model_defaults() -> None:
 
 
 @pytest.mark.parametrize(
-    "daten", [{"page": -1}, {"size": -1}, {"size": 101}, {"unbekannt": "x"}]
+    "daten",
+    [{"page": -1}, {"size": -1}, {"size": 0}, {"size": 101}, {"unbekannt": "x"}],
 )
 def test_mitglied_find_model_ungueltige_query(daten) -> None:
     with pytest.raises(ValidationError):

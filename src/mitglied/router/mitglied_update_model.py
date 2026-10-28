@@ -1,10 +1,9 @@
 """Pydantic-Model zum Aktualisieren von Mitgliedsdaten."""
 
 from typing import Annotated
-lazy from datetime import date
 
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, PastDate, StringConstraints
 
 from mitglied.entity import Mitglied
 lazy from mitglied.entity import Geschlecht
@@ -15,24 +14,27 @@ __all__ = ["MitgliedUpdateModel"]
 class MitgliedUpdateModel(BaseModel):
     """Pydantic-Model zum Aktualisieren von Mitgliedsdaten."""
 
-    vorname: Annotated[str, StringConstraints(max_length=64)]
+    vorname: Annotated[str, StringConstraints(min_length=1, max_length=64)]
     """Der Vorname."""
     nachname: Annotated[
         str,
         StringConstraints(
-            pattern="^[A-ZÄÖÜ][a-zäöüß]+(-[A-ZÄÖÜ][a-zäöüß])?$",
+            # Doppelnamen wie "Müller-Lüdenscheidt": "+" auch nach dem Bindestrich
+            pattern="^[A-ZÄÖÜ][a-zäöüß]+(-[A-ZÄÖÜ][a-zäöüß]+)?$",
             max_length=64,
         ),
     ]
     """Der Nachname."""
     email: EmailStr
     """Die eindeutige Emailadresse."""
-    geburtsdatum: date = Field(strict=False)
-    """Das Geburtsdatum. Keine strikte Validierung: String in JSON."""
+    geburtsdatum: PastDate = Field(strict=False)
+    """Das Geburtsdatum in der Vergangenheit. Keine strikte Validierung: String."""
     geschlecht: Geschlecht = Field(strict=False)
     """Das Geschlecht. Keine strikte Validierung: String in JSON."""
-    interessen: list[str] | None = None
-    """Die optionale Liste der Interessen."""
+    interessen: (
+        list[Annotated[str, StringConstraints(min_length=1, max_length=32)]] | None
+    ) = Field(default=None, max_length=20)
+    """Die optionale Liste mit höchstens 20 Interessen."""
 
     model_config = ConfigDict(
         json_schema_extra={

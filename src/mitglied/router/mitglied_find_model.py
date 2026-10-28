@@ -25,7 +25,9 @@ class MitgliedFindModel(BaseModel):
     email: str | None = None
     nachname: str | None = None
     page: Annotated[int, Field(ge=DEFAULT_PAGE_NUMBER)] = DEFAULT_PAGE_NUMBER
-    size: Annotated[int, Field(ge=0, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE
+    # ge=1: size=0 bedeutet im Repository "ohne LIMIT" und darf deshalb nicht von
+    # aussen kommen, sonst koennte man mit ?size=0 alle Datensaetze abfragen
+    size: Annotated[int, Field(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 

@@ -108,17 +108,27 @@ def test_suche_mit_seitenmetadaten(client, service, methode) -> None:
     assert (argumente["pageable"].number, argumente["pageable"].size) == (1, 5)
 
 
-def test_query_email_und_size_null(client, service) -> None:
+def test_query_email(client, service) -> None:
     response = client.request(
-        "QUERY", "/rest/query", json={"email": "alex@example.org", "size": 0}
+        "QUERY", "/rest/query", json={"email": "alex@example.org"}
     )
     assert response.status_code == HTTPStatus.OK
-    assert response.json()["page"]["total_pages"] == 1
+    # Default-Groesse 5 bei 13 Treffern
+    assert response.json()["page"] == {
+        "size": 5,
+        "number": 0,
+        "total_elements": 13,
+        "total_pages": 3,
+    }
     assert service.find.call_args.kwargs["suchparameter"].email == "alex@example.org"
 
 
 @pytest.mark.parametrize("methode", ["GET", "QUERY"])
-@pytest.mark.parametrize("parameter", [{"page": -1}, {"size": 101}, {"falsch": "x"}])
+@pytest.mark.parametrize(
+    # size=0 wuerde sonst alle Datensaetze ohne LIMIT liefern
+    "parameter",
+    [{"page": -1}, {"size": 0}, {"size": 101}, {"falsch": "x"}],
+)
 def test_suche_ungueltige_parameter(client, service, methode, parameter) -> None:
     response = (
         client.get("/rest", params=parameter)
