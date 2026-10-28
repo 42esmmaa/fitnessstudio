@@ -187,14 +187,27 @@ uv run ruff format src tests         # Formatierung
 uv run ty check                      # Typprüfung
 
 uv run pytest tests/unit/mitglied    # Unit-Tests: ohne Server, DB und Keycloak
-uv run pytest tests/integration      # Integrationstests: Backend und Appserver laufen
-uv run pytest                        # alle Tests
+uv run pytest                        # alle Tests (Integrationstests werden übersprungen)
 ```
 
 Die **Unit-Tests** ersetzen Datenbank, Keycloak und Mailserver durch Mocks und
-laufen auch in GitHub Actions. Die **Integrationstests** senden echte HTTP-Requests
-an den laufenden Appserver (Default `http://127.0.0.1:8000`, änderbar mit der
-Umgebungsvariablen `FITNESSSTUDIO_BASE_URL`) und lesen das Admin-Passwort aus `.env`.
+laufen auch in GitHub Actions.
+
+Die **Integrationstests** senden echte HTTP-Requests an den laufenden Appserver
+(Default `http://127.0.0.1:8000`, änderbar mit `FITNESSSTUDIO_BASE_URL`). Sie laufen
+nur, wenn `FITNESSSTUDIO_INTEGRATION=1` gesetzt ist; sonst werden sie übersprungen.
+Voraussetzungen:
+
+1. Backend läuft (siehe [Backend starten](#backend-starten)).
+2. In `.env` stehen zusätzlich `KEYCLOAK_CLIENT_SECRET` (aus der Keycloak-Konsole,
+   siehe [extras/compose/keycloak/ReadMe.md](extras/compose/keycloak/ReadMe.md)),
+   `KEYCLOAK_ADMIN_USERNAME=admin` und `KEYCLOAK_ADMIN_PASSWORD`.
+3. Appserver läuft: `uv run mitglied` (nach Änderungen an `.env` neu starten).
+
+```powershell
+$env:FITNESSSTUDIO_INTEGRATION = "1"
+uv run pytest tests/integration --no-cov
+```
 
 `uv run pytest` erzeugt zusätzlich einen Testbericht (`report.html`) und
 einen Bericht zur Testabdeckung (`htmlcov/index.html`).
