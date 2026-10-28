@@ -1,0 +1,69 @@
+@startuml schichtenarchitektur
+title Schichtenarchitektur des Appservers "mitglied"
+
+skinparam componentStyle rectangle
+skinparam roundCorner 8
+
+actor "Client\n(Browser, Bruno, Locust)" as client
+
+package "Schnittstellen" {
+  [MitgliedRouter\nGET, QUERY] as getRouter
+  [MitgliedWriteRouter\nPOST, PUT, DELETE] as writeRouter
+  [GraphQL-Schema\nQuery, Mutation\n(Strawberry)] as graphql
+  [AuthRouter\nQUERY /auth/token] as authRouter
+}
+
+package "Security" {
+  [RolesRequired] as roles
+  [TokenService] as tokenService
+  [UserService] as userService
+}
+
+package "Geschäftslogik (Service)" {
+  [MitgliedService\nlesen] as readService
+  [MitgliedWriteService\nanlegen, ändern, löschen] as writeService
+  [send_mail] as mailer
+}
+
+package "Persistenz (Repository)" {
+  [MitgliedRepository] as repo
+  [Session-Factory\n(SQLAlchemy)] as session
+}
+
+package "Entities" {
+  [Mitglied, Vertrag, Zahlung] as entities
+}
+
+database "PostgreSQL" as db
+node "Keycloak" as keycloak
+node "Mailpit (SMTP)" as mail
+
+client --> getRouter : REST
+client --> writeRouter : REST
+client --> graphql : GraphQL
+client --> authRouter : Login
+
+getRouter ..> roles
+writeRouter ..> roles
+roles --> tokenService
+authRouter --> tokenService
+graphql --> tokenService
+
+getRouter --> readService
+graphql --> readService
+writeRouter --> writeService
+graphql --> writeService
+writeRouter ..> mailer : BackgroundTasks
+graphql ..> mailer : BackgroundTasks
+
+writeService --> userService
+readService --> repo
+writeService --> repo
+repo --> session
+repo ..> entities
+
+session --> db : psycopg
+tokenService --> keycloak : OIDC
+userService --> keycloak : Admin-REST
+mailer --> mail : SMTP
+@enduml

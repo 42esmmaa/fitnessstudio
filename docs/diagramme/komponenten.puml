@@ -1,0 +1,37 @@
+@startuml komponenten
+title Laufzeitumgebung mit Docker Compose (extras/compose)
+
+skinparam roundCorner 8
+
+actor "Entwickler/in" as dev
+
+node "Docker Compose (Projekt fitnessstudio)" {
+  node "mitglied\n(eigenes Docker-Image)" as app {
+    [uvicorn + FastAPI\nPort 8000] as fastapi
+  }
+  node "postgres" as pg {
+    database "DB mitglied\nSchema mitglied" as dbMitglied
+    database "DB keycloak" as dbKeycloak
+  }
+  node "keycloak" as kc {
+    [Realm fitnessstudio\nClient fitnessstudio-client\nRollen admin, mitglied] as realm
+  }
+  node "mailpit" as mp {
+    [SMTP Port 1025\nWeb-UI Port 8025] as smtp
+  }
+}
+
+file ".env\n(Passwörter, nicht im Git)" as env
+
+dev --> fastapi : "http://127.0.0.1:8000\n/rest, /graphql, /auth"
+dev --> realm : "https://localhost:8843\nAdmin-Konsole"
+dev --> smtp : "Mails ansehen"
+
+fastapi --> dbMitglied : "SQLAlchemy / psycopg\nPort 5432"
+fastapi --> realm : "Token prüfen,\nUser anlegen/löschen"
+fastapi --> smtp : "Mail bei Neuanlage"
+realm --> dbKeycloak
+env ..> app : env_file
+env ..> pg : env_file
+env ..> kc : env_file
+@enduml
