@@ -19,7 +19,8 @@ def set_response_headers(response: Response) -> Response:
     """
     headers: Final = response.headers
     headers["X-Frame-Options"] = "SAMEORIGIN"
-    headers["X-XSS-Protection"] = "1; mode=block"
+    # X-XSS-Protection ist veraltet und wird von aktuellen Browsern ignoriert;
+    # den Schutz uebernimmt Content-Security-Policy
     headers["X-Content-Type-Options"] = "nosniff"
     headers["Content-Security-Policy"] = "default-src 'self'; object-src 'none'"
     headers["Strict-Transport-Security"] = (

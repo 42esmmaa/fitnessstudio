@@ -5,6 +5,7 @@ from typing import Annotated, Final
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import JSONResponse
 from loguru import logger
+from starlette.concurrency import run_in_threadpool
 
 from mitglied.config.dev.db_populate import DbPopulateService, get_db_populate_service
 from mitglied.problem_details import ProblemDetails
@@ -44,5 +45,7 @@ async def populate(
         'REST-Schnittstelle zum Neuladen der DB aufgerufen von "{}"',
         current_user.username,
     )
-    service.populate()
+    # populate() ist synchron und dauert: im Threadpool ausfuehren, damit die
+    # Event-Loop waehrenddessen andere Requests bearbeiten kann
+    await run_in_threadpool(service.populate)
     return JSONResponse(content={"db_populate": "success"})

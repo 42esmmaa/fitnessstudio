@@ -5,7 +5,7 @@ from mitglied.entity import Geschlecht, Tarif
 CREATE = "mutation($input: MitgliedInput!) { create(mitgliedInput: $input) { id } }"
 
 
-def test_anlegen_ohne_interessen_und_vertrag(client, services, eingabe):
+def test_anlegen_ohne_interessen_und_vertrag(client, services, eingabe, mail):
     daten = client.post(
         "/graphql",
         json={
@@ -14,6 +14,8 @@ def test_anlegen_ohne_interessen_und_vertrag(client, services, eingabe):
         },
     ).json()
     assert daten == {"data": {"create": {"id": 1000}}}
+    # wie bei REST wird eine Mail im Hintergrund verschickt
+    mail.assert_called_once_with(services[2].create.return_value)
     mitglied = services[2].create.call_args.kwargs["mitglied"]
     assert mitglied.interessen is None
     assert mitglied.vertrag is None

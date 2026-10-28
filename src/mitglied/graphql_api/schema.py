@@ -27,6 +27,7 @@ from mitglied.service import (
     MitgliedService,
     MitgliedWriteService,
     NotFoundError,
+    send_mail,
 )
 
 __all__ = ["graphql_router"]
@@ -128,10 +129,11 @@ class Mutation:
     """Mutations, um Mitglieder anzulegen und sich einzuloggen."""
 
     @strawberry.mutation
-    def create(self, mitglied_input: MitgliedInput) -> CreatePayload:
+    def create(self, mitglied_input: MitgliedInput, info: Info) -> CreatePayload:
         """Ein neues Mitglied anlegen.
 
         :param mitglied_input: Daten des neuen Mitglieds
+        :param info: Kontext mit den Background-Tasks von FastAPI für den Mailversand
         :return: ID des neuen Mitglieds
         :rtype: CreatePayload
         :raises EmailExistsError: Falls die Emailadresse bereits existiert
@@ -148,6 +150,8 @@ class Mutation:
         mitglied_dto: Final = write_service.create(
             mitglied=mitglied_model.to_mitglied()
         )
+        # wie bei REST: Mail im Hintergrund, nachdem der Response gesendet wurde
+        info.context["background_tasks"].add_task(send_mail, mitglied_dto)
         payload: Final = CreatePayload(id=mitglied_dto.id)
 
         logger.debug("{}", payload)

@@ -126,7 +126,18 @@ class TokenService:
         :return: Liste der Rollen
         :rtype: list[str]
         """
-        roles: Final[str] = token["resource_access"][self.keycloak.client_id]["roles"]
-        roles_enum: Final = [Role[role.upper()] for role in roles]
+        roles: Final[list[str]] = token["resource_access"][self.keycloak.client_id][
+            "roles"
+        ]
+        # Unbekannte Rollen, z.B. neu in Keycloak angelegt, werden ignoriert, statt
+        # den ganzen Token als ungueltig abzulehnen
+        unbekannt: Final = [
+            role for role in roles if role.upper() not in Role.__members__
+        ]
+        if unbekannt:
+            logger.warning("Unbekannte Rollen im Token: {}", unbekannt)
+        roles_enum: Final = [
+            Role[role.upper()] for role in roles if role.upper() in Role.__members__
+        ]
         logger.debug("roles_enum={}", roles_enum)
         return roles_enum

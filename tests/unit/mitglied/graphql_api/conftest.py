@@ -2,7 +2,7 @@
 
 from datetime import date
 from importlib import import_module
-from unittest.mock import create_autospec
+from unittest.mock import Mock, create_autospec
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,8 +21,17 @@ graphql = import_module("mitglied.graphql_api.schema")
 
 
 @pytest.fixture
-def services(monkeypatch):
+def mail(monkeypatch) -> Mock:
+    """Keinen echten Mailversand in Unit-Tests: send_mail durch einen Mock ersetzen."""
+    mock = Mock()
+    monkeypatch.setattr(graphql, "send_mail", mock)
+    return mock
+
+
+@pytest.fixture
+def services(monkeypatch, mail):  # ruff: ignore[unused-function-argument]
     """Datenbank und Keycloak durch kontrollierte Services ersetzen."""
+    # "mail" als Parameter, damit der Mailversand immer simuliert wird
     dto = MitgliedDTO(
         id=1000,
         version=1,

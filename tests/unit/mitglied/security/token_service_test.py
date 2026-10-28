@@ -87,10 +87,13 @@ def test_token_mit_fehlenden_claims(service, claims, feld) -> None:
 
 
 def test_token_mit_unbekannter_rolle(service, claims) -> None:
-    claims["resource_access"]["fitnessstudio-client"]["roles"] = ["unbekannt"]
+    # unbekannte Rollen werden ignoriert, die bekannten bleiben erhalten
+    claims["resource_access"]["fitnessstudio-client"]["roles"] = [
+        "unbekannt",
+        "mitglied",
+    ]
     service.keycloak.decode_token.return_value = claims
-    with pytest.raises(AuthorizationError):
-        service.get_user_from_token("test-token")
+    assert service.get_user_from_token("test-token").roles == [Role.MITGLIED]
 
 
 def test_token_mit_jwt_fehler(service) -> None:

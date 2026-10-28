@@ -1,7 +1,7 @@
 """Mailversand ohne echten SMTP-Server prüfen."""
 
 from datetime import date
-from smtplib import SMTPServerDisconnected
+from smtplib import SMTPRecipientsRefused, SMTPServerDisconnected
 from socket import gaierror
 from unittest.mock import patch
 
@@ -73,6 +73,23 @@ def test_send_mail_verbindungsfehler(mitglied_dto, smtp, fehler) -> None:
     smtp.side_effect = fehler("Testfehler")
     send_mail(mitglied_dto)
     smtp.assert_called_once()
+
+
+def test_send_mail_maskiert_html(mitglied_dto, smtp) -> None:
+    mitglied_dto.nachname = "<script>{x}</script>"
+    send_mail(mitglied_dto)
+    nachricht = smtp.return_value.__enter__.return_value.send_message.call_args.args[0]
+    html = nachricht.get_body(preferencelist=("html",)).get_content()
+    assert "<script>" not in html
+    assert "&lt;script&gt;{x}&lt;/script&gt;" in html
+
+
+def test_send_mail_sonstiger_smtp_fehler(mitglied_dto, smtp) -> None:
+    smtp.return_value.__enter__.return_value.send_message.side_effect = (
+        SMTPRecipientsRefused({})
+    )
+    send_mail(mitglied_dto)
+    smtp.return_value.__exit__.assert_called_once()
 
 
 def test_send_mail_verbindung_bricht_beim_senden_ab(mitglied_dto, smtp) -> None:

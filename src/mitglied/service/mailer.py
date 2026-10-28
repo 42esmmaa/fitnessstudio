@@ -2,7 +2,8 @@
 
 from email.message import EmailMessage
 from email.utils import make_msgid
-from smtplib import SMTP, SMTPServerDisconnected
+from html import escape
+from smtplib import SMTP, SMTPException
 from socket import gaierror
 from typing import Final
 from uuid import uuid4
@@ -32,11 +33,9 @@ def send_mail(mitglied_dto: MitgliedDTO) -> None:
 
     msg.set_content(f"Neues Mitglied: {mitglied_dto.nachname}")
 
-    asparagus_cid: Final = make_msgid()
+    # Benutzereingaben im HTML immer maskieren
     msg.add_alternative(
-        f"Neues Mitglied: <b>{mitglied_dto.nachname}</b>".format(
-            asparagus_cid=asparagus_cid[1:-1]
-        ),
+        f"Neues Mitglied: <b>{escape(mitglied_dto.nachname)}</b>",
         subtype="html",
     )
 
@@ -52,12 +51,12 @@ def send_mail(mitglied_dto: MitgliedDTO) -> None:
     except ConnectionRefusedError:
         # ConnectionRefusedError -> ConnectionError -> OSError
         logger.warning("ConnectionRefusedError")
-    except SMTPServerDisconnected:
-        # z.B. bei Timeout
-        # SMTPServerDisconnected -> SMTPException -> OSError
-        logger.warning("SMTPServerDisconnected")
     except TimeoutError:
         logger.warning("TimeoutError beim Senden der E-Mail")
     except gaierror:
         # gai = getaddrinfo()  # NOSONAR
         logger.warning("socket.gaierror: Laeuft der Mailserver im virtuellen Netzwerk?")
+    except SMTPException as err:
+        # alle SMTP-Fehler, z.B. SMTPServerDisconnected oder SMTPRecipientsRefused:
+        # der Mailversand im Hintergrund darf den Server nicht stoeren
+        logger.warning("{}: {}", type(err).__name__, err)
