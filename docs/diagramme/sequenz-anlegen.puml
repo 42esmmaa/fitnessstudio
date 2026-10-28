@@ -1,0 +1,46 @@
+@startuml sequenz-anlegen
+title Neues Mitglied anlegen: POST /rest
+
+autonumber
+skinparam roundCorner 8
+
+actor Client
+participant "MitgliedWriteRouter" as router
+participant "MitgliedWriteService" as service
+participant "MitgliedRepository" as repo
+participant "UserService" as us
+database "PostgreSQL" as db
+participant "Keycloak" as kc
+participant "send_mail\n(BackgroundTask)" as mail
+
+Client -> router : POST /rest (JSON)
+router -> router : Validierung durch Pydantic\n(MitgliedModel)
+alt ungültige Daten
+  router --> Client : 422 Unprocessable Content
+end
+router -> service : create(mitglied)
+service -> repo : exists_email()
+repo -> db : SELECT count(*) ... lower(email)
+alt Email existiert in DB
+  service --> router : EmailExistsError
+  router --> Client : 422 ProblemDetails
+end
+service -> us : username_exists(), email_exists()
+us -> kc : GET /admin/realms/fitnessstudio/users
+service -> us : create_user(user)
+us -> kc : POST users + Client-Rolle "mitglied"
+kc --> us : user_id
+service -> repo : create(mitglied)
+repo -> db : INSERT mitglied, vertrag, zahlung
+alt DB-Fehler (z.B. UNIQUE-Index)
+  service -> us : delete_user(user_id)
+  us -> kc : DELETE user (Kompensation)
+  service --> router : EmailExistsError bzw. Fehler
+  router --> Client : 422 bzw. 500
+else COMMIT erfolgreich
+  service --> router : MitgliedDTO
+  router --> Client : 201 Created, Location: /rest/{id}
+  router ->> mail : nach dem Response
+  mail -> mail : SMTP an Mailpit
+end
+@enduml

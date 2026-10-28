@@ -1,0 +1,38 @@
+@startuml sequenz-aendern
+title Mitglied ändern: PUT /rest/{id} mit optimistischer Synchronisation
+
+autonumber
+skinparam roundCorner 8
+
+actor Client
+participant "RolesRequired" as roles
+participant "MitgliedWriteRouter" as router
+participant "MitgliedWriteService" as service
+database "PostgreSQL" as db
+
+Client -> roles : PUT /rest/1000\nAuthorization: Bearer ...\nIf-Match: "0"
+roles -> roles : Token prüfen, Rolle admin oder mitglied
+alt kein / ungültiger Token
+  roles --> Client : 401 Unauthorized
+end
+roles -> router : User in request.state
+alt If-Match fehlt
+  router --> Client : 428 Precondition Required
+else If-Match ungültig
+  router --> Client : 412 Precondition Failed
+end
+router -> service : update(mitglied, id, version, user)
+service -> db : SELECT ... WHERE id = 1000
+alt Nicht-Admin und fremde bzw. unbekannte ID
+  service --> Client : 403 Forbidden
+else Admin und unbekannte ID
+  service --> Client : 404 Not Found
+else version != If-Match
+  service --> Client : 412 Precondition Failed
+else neue Email gehört anderem Mitglied
+  service --> Client : 422 Unprocessable Content
+end
+service -> db : UPDATE ... SET version = version + 1\nWHERE id = 1000 AND version = 0
+service --> router : MitgliedDTO (version 1)
+router --> Client : 204 No Content, ETag: "1"
+@enduml
