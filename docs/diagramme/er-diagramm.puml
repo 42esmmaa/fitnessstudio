@@ -1,0 +1,61 @@
+@startuml er-diagramm
+' ER-Diagramm gemaess src/mitglied/config/resources/postgresql/create.sql
+title ER-Diagramm: Schema "mitglied"
+
+hide circle
+skinparam roundCorner 8
+
+entity "mitglied" as mitglied {
+  * **id** : INTEGER <<PK, IDENTITY ab 1000>>
+  --
+  * version : INTEGER <<DEFAULT 0>>
+  * vorname : TEXT
+  * nachname : TEXT <<Index>>
+  * email : TEXT <<UNIQUE lower(email)>>
+  * geburtsdatum : DATE <<CHECK vor heute>>
+  * geschlecht : geschlecht
+    interessen : JSONB
+  * erzeugt : TIMESTAMP
+  * aktualisiert : TIMESTAMP
+}
+
+entity "vertrag" as vertrag {
+  * **id** : INTEGER <<PK, IDENTITY ab 1000>>
+  --
+  * beginn : DATE
+  * monatlicher_beitrag : NUMERIC(6,2) <<CHECK ≥ 0>>
+  * tarif : tarif
+  * getraenkeflat : BOOLEAN <<DEFAULT FALSE>>
+  * mitglied_id : INTEGER <<FK, UNIQUE>>
+}
+
+entity "zahlung" as zahlung {
+  * **id** : INTEGER <<PK, IDENTITY ab 1000>>
+  --
+  * betrag : NUMERIC(8,2) <<CHECK positiv>>
+  * zahlungsdatum : DATE
+  * mitglied_id : INTEGER <<FK, Index>>
+}
+
+enum geschlecht {
+  MAENNLICH
+  WEIBLICH
+  DIVERS
+}
+
+enum tarif {
+  BASIC
+  PREMIUM
+  STUDENT
+}
+
+mitglied ||--o| vertrag : "hat (1:0..1)\nON DELETE CASCADE"
+mitglied ||--o{ zahlung : "leistet (1:N)\nON DELETE CASCADE"
+mitglied .. geschlecht
+vertrag .. tarif
+
+note bottom of mitglied
+  * = NOT NULL
+  version: optimistische Synchronisation (ETag / If-Match)
+end note
+@enduml
