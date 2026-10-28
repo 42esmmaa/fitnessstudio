@@ -9,3 +9,6 @@ report.html
 .pytest_cache/
 .scannerwork/
 log/
+site/
+build/
+dependency-check-report.html

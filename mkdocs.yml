@@ -1,0 +1,64 @@
+# Dokumentation als Website mit mkdocs
+#   uv run mkdocs serve    -> http://127.0.0.1:8000 (vorher Appserver beenden: gleicher Port)
+#   uv run mkdocs build    -> Verzeichnis site
+# https://www.mkdocs.org/user-guide/configuration
+site_name: Fitnessstudio - Appserver mitglied
+site_description: Mitgliederverwaltung eines Fitnessstudios mit FastAPI
+site_author: Esma Ak, Eyübhan Yörümez
+repo_url: https://github.com/42esmmaa/fitnessstudio
+docs_dir: docs
+# AsciiDoc-Dokument und PlantUML-Quelltexte gehoeren nicht zur Website;
+# die gerenderten Diagramme liegen als SVG in docs/img
+exclude_docs: |
+  *.adoc
+  diagramme/
+
+theme:
+  name: material
+  language: de
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Dunkles Design
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Helles Design
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search:
+      lang: de
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            # Docstrings im Format ":param x: ..." bzw. ":return: ..."
+            docstring_style: sphinx
+            show_source: true
+            show_root_heading: true
+            members_order: source
+            show_if_no_docstring: false
+
+nav:
+  - Start: index.md
+  - Architektur: architektur.md
+  - API-Referenz:
+      - Schnittstellen (REST): api/router.md
+      - GraphQL: api/graphql.md
+      - Geschäftslogik: api/service.md
+      - Persistenz: api/repository.md
+      - Entities: api/entity.md
+      - Security: api/security.md
+      - Konfiguration: api/config.md
