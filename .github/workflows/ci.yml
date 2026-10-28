@@ -29,6 +29,8 @@ jobs:
         run: uv run --frozen ty check
       - name: Unit-Tests mit Coverage
         run: uv run --frozen pytest tests/unit/mitglied
+      - name: Dokumentation mit mkdocs bauen
+        run: uv run --frozen mkdocs build --strict
 
   docker:
     runs-on: ubuntu-latest
