@@ -1,9 +1,8 @@
 """Management der Benutzerdaten mit dem REST-API von Keycloak."""
 
-from dataclasses import dataclass
-from typing import Final, cast
+from typing import Any, Final, cast
 
-from keycloak import KeycloakAdmin, KeycloakConnectionError
+from keycloak import KeycloakAdmin, KeycloakConnectionError, KeycloakError
 from loguru import logger
 from urllib3 import disable_warnings
 from urllib3.exceptions import InsecureRequestWarning
@@ -12,18 +11,6 @@ from mitglied.config import keycloak_admin_config
 lazy from mitglied.security.user import User
 
 __all__ = ["UserService"]
-
-
-@dataclass(frozen=True, eq=False, slots=True, kw_only=True)
-class RoleRepresentation:
-    """Datenstruktur für Rollen aus Keycloak."""
-
-    id: str
-    name: str
-    description: str
-    composite: bool
-    clientRole: bool  # ruff: ignore[mixed-case-variable-in-class-scope]  # NOSONAR
-    containerId: str  # ruff: ignore[mixed-case-variable-in-class-scope]  # NOSONAR
 
 
 class UserService:
@@ -50,15 +37,18 @@ class UserService:
             )
             logger.debug("client_id={} für 'fitnessstudio-client'", self.client_uuid)
             roles = self.keycloak_admin.get_client_roles(client_id=self.client_uuid)
-            roles_mitglied = [role for role in roles if role["name"] == "mitglied"]
-            # Rolle 'mitglied' in Keycloak fuer KeycloakAdmin.assign_client_role() und
-            # ist ein dict mit Schluesseln "id", "name", "description", ...
-            self.rolle_mitglied: RoleRepresentation | None = roles_mitglied[0]
+            # Rolle 'mitglied' in Keycloak fuer KeycloakAdmin.assign_client_role():
+            # ein dict mit Schluesseln "id", "name", "description", ...
+            self.rolle_mitglied: dict[str, Any] | None = next(
+                (role for role in roles if role["name"] == "mitglied"), None
+            )
+            if self.rolle_mitglied is None:
+                logger.error("Die Client-Rolle 'mitglied' fehlt in Keycloak")
             logger.debug("rolle_mitglied={}", self.rolle_mitglied)
         except KeycloakConnectionError:
             logger.error("Keine Verbindung zu Keycloak! Ist Keycloak gestartet?")
             self.client_uuid = "N/A"
-            self.rolle_mitglied: RoleRepresentation | None = None
+            self.rolle_mitglied = None
 
     def username_exists(self, username: str) -> bool:
         """Abfrage, ob ein Benutzername bereits existiert.
@@ -100,6 +90,10 @@ class UserService:
         :rtype: str
         :raises KeycloakError: Falls mit Keycloak ein Fehler auftritt
         """
+        if self.rolle_mitglied is None:
+            # vor dem Anlegen pruefen, sonst gaebe es einen User ohne Rolle
+            raise KeycloakError(error_message="Client-Rolle 'mitglied' fehlt")
+
         # POST /admin/realms/{realm}/users
         user_id: Final = self.keycloak_admin.create_user(
             payload={
@@ -120,3 +114,23 @@ class UserService:
             roles=[self.rolle_mitglied],
         )
         return user_id
+
+    def delete_user(self, user_id: str) -> bool:
+        """Einen User in Keycloak löschen, z.B. als Kompensation bei einem DB-Fehler.
+
+        Ein Fehler wird nur protokolliert, damit der ursprüngliche Fehler, der zur
+        Kompensation geführt hat, nicht verdeckt wird.
+
+        :param user_id: user-id von Keycloak
+        :return: True, falls der User gelöscht wurde, False sonst
+        :rtype: bool
+        """
+        logger.debug("user_id={}", user_id)
+        try:
+            # DELETE /admin/realms/{realm}/users/{id}
+            self.keycloak_admin.delete_user(user_id=user_id)
+        except KeycloakError:
+            logger.exception("Keycloak-User {} konnte nicht gelöscht werden", user_id)
+            return False
+        logger.warning("Keycloak-User {} wurde wieder gelöscht", user_id)
+        return True

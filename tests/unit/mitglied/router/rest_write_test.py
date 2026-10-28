@@ -12,6 +12,7 @@ from mitglied.security import AuthorizationError, Role, TokenService, User
 from mitglied.security.dependencies import get_token_service
 from mitglied.service import (
     EmailExistsError,
+    ForbiddenError,
     MitgliedWriteService,
     NotFoundError,
     VersionOutdatedError,
@@ -120,6 +121,8 @@ def test_put_erfolgreich(client, service, token_service, daten, rolle) -> None:
     assert argumente["mitglied_id"] == MITGLIED_ID
     assert argumente["version"] == 1
     assert argumente["mitglied"].email == "alex@example.org"
+    # der User aus dem Token wird fuer die Eigentuemerpruefung durchgereicht
+    assert argumente["user"] is token_service.get_user_from_request.return_value
 
 
 @pytest.mark.parametrize(
@@ -138,6 +141,7 @@ def test_put_ohne_gueltigen_if_match(
     headers = {} if if_match is None else {"If-Match": if_match}
     response = client.put("/rest/1000", json=daten, headers=headers)
     assert response.status_code == erwartet
+    assert response.headers["content-type"] == "application/problem+json"
     service.update.assert_not_called()
 
 
@@ -147,6 +151,7 @@ def test_put_ohne_gueltigen_if_match(
         (NotFoundError(), HTTPStatus.NOT_FOUND),
         (EmailExistsError("alex@example.org"), HTTPStatus.UNPROCESSABLE_ENTITY),
         (VersionOutdatedError(1), HTTPStatus.PRECONDITION_FAILED),
+        (ForbiddenError(), HTTPStatus.FORBIDDEN),
     ],
 )
 def test_put_service_fehler(client, service, daten, fehler, erwartet) -> None:
@@ -169,7 +174,17 @@ def test_delete_erfolgreich(client, service, token_service, rolle) -> None:
     response = client.delete("/rest/1000")
     assert response.status_code == HTTPStatus.NO_CONTENT
     assert response.content == b""
-    service.delete_by_id.assert_called_once_with(mitglied_id=1000)
+    service.delete_by_id.assert_called_once_with(
+        mitglied_id=1000, user=token_service.get_user_from_request.return_value
+    )
+
+
+def test_delete_fremdes_mitglied_verboten(client, service, token_service) -> None:
+    token_service.get_user_from_request.return_value.roles[:] = [Role.MITGLIED]
+    service.delete_by_id.side_effect = ForbiddenError
+    response = client.delete("/rest/1000")
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.headers["content-type"] == "application/problem+json"
 
 
 @pytest.mark.parametrize("methode", ["PUT", "DELETE"])

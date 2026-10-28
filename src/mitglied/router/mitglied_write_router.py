@@ -8,7 +8,7 @@ from loguru import logger
 from mitglied.problem_details import ProblemDetails
 from mitglied.router.constants import IF_MATCH, IF_MATCH_MIN_LEN
 from mitglied.router.dependencies import get_write_service
-from mitglied.security import Role, RolesRequired
+from mitglied.security import Role, RolesRequired, User
 from mitglied.service import send_mail
 lazy from mitglied.router.mitglied_model import MitgliedModel
 lazy from mitglied.router.mitglied_update_model import MitgliedUpdateModel
@@ -69,10 +69,13 @@ def put(
     :return: Response mit Statuscode 204
     :rtype: Response
     :raises ValidationError: Falls es bei Pydantic Validierungsfehler gibt
-    :raises EmailExistsError: Falls die neue Emailadresse bereits
+    :raises EmailExistsError: Falls die neue Emailadresse bereits existiert
     :raises NotFoundError: Falls zur id kein Mitglied existiert
+    :raises ForbiddenError: Falls ein Mitglied fremde Daten ändern will
     :raises VersionOutdatedError: Falls die Versionsnummer nicht aktuell ist
     """
+    # User-Objekt ist durch Depends(RolesRequired()) in Request.state gepuffert
+    user: Final[User] = request.state.current_user
     if_match_value: Final = request.headers.get(IF_MATCH)
     logger.debug(
         "mitglied_id={}, if_match={}, mitglied_update_model={}",
@@ -99,15 +102,16 @@ def put(
     try:
         version_int: Final = int(version)
     except ValueError:
-        return Response(
+        return ProblemDetails.create(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
-        )
+        ).to_response()
 
     mitglied: Final = mitglied_update_model.to_mitglied()
     mitglied_modified: Final = service.update(
         mitglied=mitglied,
         mitglied_id=mitglied_id,
         version=version_int,
+        user=user,
     )
     logger.debug("mitglied_modified={}", mitglied_modified)
 
@@ -123,15 +127,19 @@ def put(
 )
 def delete_by_id(
     mitglied_id: int,
+    request: Request,
     service: Annotated[MitgliedWriteService, Depends(get_write_service)],
 ) -> Response:
     """DELETE-Request, um ein Mitglied anhand seiner ID zu löschen.
 
     :param mitglied_id: ID des zu löschenden Mitglieds
+    :param request: Injiziertes Request-Objekt mit dem User aus dem Token
     :param service: Injizierter Service für Geschäftslogik
     :return: Response mit Statuscode 204
     :rtype: Response
+    :raises ForbiddenError: Falls ein Mitglied fremde Daten löschen will
     """
-    logger.debug("mitglied_id={}", mitglied_id)
-    service.delete_by_id(mitglied_id=mitglied_id)
+    user: Final[User] = request.state.current_user
+    logger.debug("mitglied_id={}, user={}", mitglied_id, user)
+    service.delete_by_id(mitglied_id=mitglied_id, user=user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

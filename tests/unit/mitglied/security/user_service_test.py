@@ -91,6 +91,31 @@ def test_create_user_fehler_ohne_rollenzuweisung(admin_client) -> None:
     admin_client.assign_client_role.assert_not_called()
 
 
+def test_fehlende_rolle_mitglied(admin_client) -> None:
+    admin_client.get_client_roles.return_value = [{"id": "admin-role", "name": "admin"}]
+    service = UserService()
+    assert service.rolle_mitglied is None
+    user = User(
+        username="alex",
+        email="alex@example.org",
+        nachname="Muster",
+        vorname="Alex",
+        roles=[],
+    )
+    with pytest.raises(KeycloakError):
+        service.create_user(user)
+    # ohne Rolle wird gar kein User angelegt
+    admin_client.create_user.assert_not_called()
+
+
+@pytest.mark.parametrize("fehler", [None, KeycloakError("Testfehler")])
+def test_delete_user(admin_client, fehler) -> None:
+    admin_client.delete_user.side_effect = fehler
+    service = UserService()
+    assert service.delete_user("user-uuid") is (fehler is None)
+    admin_client.delete_user.assert_called_once_with(user_id="user-uuid")
+
+
 def test_fehlende_keycloak_verbindung(admin_client) -> None:
     admin_client.get_client_id.side_effect = KeycloakConnectionError("Testfehler")
     service = UserService()
