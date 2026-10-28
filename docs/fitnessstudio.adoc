@@ -1,0 +1,217 @@
+= Appserver „mitglied“ für ein Fitnessstudio
+Esma Ak; Eyübhan Yörümez
+:doctype: book
+:toc: left
+:toc-title: Inhalt
+:sectnums:
+:icons: font
+:source-highlighter: highlight.js
+:imagesdir: img
+:lang: de
+
+// Vorschau in VS Code: Extension "AsciiDoc" (asciidoctor.asciidoctor-vscode),
+// dort in den Einstellungen "Asciidoc > Extensions: Enable Kroki" aktivieren.
+// Die Diagramme stehen als PlantUML-Quelltext in ./diagramme.
+// Fertig gerenderte SVG-Dateien liegen zusaetzlich in ./img (z.B. fuer GitHub).
+
+[abstract]
+Der Appserver verwaltet die Mitglieder eines Fitnessstudios mit ihrem Vertrag und
+ihren Zahlungen. Er bietet eine REST- und eine GraphQL-Schnittstelle, speichert die
+Daten in PostgreSQL und sichert die Zugriffe mit Keycloak (OIDC, OAuth 2) ab.
+Entwickelt wurde er mit Python und FastAPI im Rahmen der Vorlesung
+_Software Engineering_ an der Hochschule Karlsruhe (Aufgabe 1).
+
+== Use Cases
+
+Es gibt drei Akteure: Interessent/innen ohne Login können sich als Mitglied
+registrieren. Mitglieder (Rolle `mitglied`) lesen, ändern und löschen nur ihre
+*eigenen* Daten. Administrator/innen (Rolle `admin`) dürfen alle Mitglieder suchen
+und bearbeiten sowie im Entwicklungsmodus die Datenbank neu laden.
+
+plantuml::diagramme/use-cases.puml[format=svg,target=use-cases]
+
+== Architektur
+
+=== Schichten
+
+Der Appserver ist in Schichten aufgebaut. Jede Schicht kennt nur die Schicht darunter;
+die Abhängigkeiten werden durch _Dependency Injection_ von FastAPI (`Depends`) in
+`router/dependencies.py` bzw. `security/dependencies.py` aufgelöst.
+
+[cols="1,2,3"]
+|===
+|Schicht |Package |Aufgabe
+
+|Schnittstellen
+|`router`, `graphql_api`, `security/auth_router.py`
+|HTTP-Requests entgegennehmen, mit Pydantic validieren, Statuscodes und Header
+(z.B. `ETag`, `Location`) setzen
+
+|Security
+|`security`
+|Token aus dem Header `Authorization` prüfen, Rollen überprüfen (`RolesRequired`),
+Benutzer in Keycloak anlegen und löschen
+
+|Geschäftslogik
+|`service`
+|Regeln wie „ein Mitglied darf nur eigene Daten ändern“, Emailadresse eindeutig,
+optimistische Synchronisation, Transaktionen, Mailversand
+
+|Persistenz
+|`repository`
+|Datenbankzugriff mit SQLAlchemy, Suche mit Suchparametern und Pagination
+
+|Entities
+|`entity`
+|Abbildung der Tabellen auf Klassen (OR-Mapping)
+|===
+
+Zwischen den Schichten werden *DTOs* (`MitgliedDTO`, `VertragDTO`) statt Entities
+weitergereicht. Dadurch verlassen keine Objekte mit einer offenen DB-Session die
+Geschäftslogik.
+
+plantuml::diagramme/schichtenarchitektur.puml[format=svg,target=schichtenarchitektur]
+
+=== Laufzeitumgebung
+
+PostgreSQL, Keycloak und Mailpit laufen als Docker-Container. Der Appserver läuft
+entweder lokal mit `uv run mitglied` oder ebenfalls als Container
+(`extras/compose/mitglied/compose.yml`). Passwörter stehen nur in der lokalen Datei
+`.env`, die nicht im Git-Repository liegt.
+
+plantuml::diagramme/komponenten.puml[format=svg,target=komponenten]
+
+== Datenmodell
+
+Ein Mitglied hat höchstens einen Vertrag (1:0..1) und beliebig viele Zahlungen
+(1:N). Beim Löschen eines Mitglieds werden Vertrag und Zahlungen mitgelöscht
+(`ON DELETE CASCADE` in der DB und `cascade="save-update, delete"` in SQLAlchemy).
+
+plantuml::diagramme/er-diagramm.puml[format=svg,target=er-diagramm]
+
+Besonderheiten:
+
+* Die Emailadresse ist *ohne Groß-/Kleinschreibung* eindeutig: Index auf
+  `lower(email)` in der DB und Normalisierung in der Entity (`@validates("email")`).
+* Die IDs werden von PostgreSQL generiert (`IDENTITY` ab 1000). Die Testdaten in
+  `extras/compose/postgres/init/mitglied/csv` verwenden kleinere IDs.
+* `version` dient der optimistischen Synchronisation (`version_id_col` in SQLAlchemy).
+* `interessen` ist ein JSON-Array mit Strings.
+
+== Schnittstellen
+
+=== REST
+
+[cols="1,2,2,3"]
+|===
+|Methode |Pfad |Rolle |Beschreibung
+
+|`GET` |`/rest/{id}` |`admin`, `mitglied` |Ein Mitglied lesen; `ETag` mit Version, `If-None-Match` liefert ggf. `304`
+|`GET` |`/rest?nachname=&email=&page=&size=` |`admin` |Suche mit Pagination (`size` 1 bis 100)
+|`QUERY` |`/rest/query` |`admin` |Suche mit den Suchparametern im Request-Body
+|`POST` |`/rest` |– |Neues Mitglied anlegen; `201` mit Header `Location`
+|`PUT` |`/rest/{id}` |`admin`, `mitglied` |Ändern; erfordert `If-Match` mit der Version; `204` mit neuem `ETag`
+|`DELETE` |`/rest/{id}` |`admin`, `mitglied` |Löschen; `204`
+|`QUERY` |`/auth/token` |– |Login mit Benutzername und Passwort; liefert den JWT
+|`QUERY` |`/dev/db_populate` |`admin` |DB mit Testdaten neu laden (nur im dev-Modus)
+|===
+
+Fehler werden als _Problem Details_ (RFC 9457, `application/problem+json`) geliefert:
+
+[cols="1,4"]
+|===
+|Status |Bedeutung
+
+|`401` |kein oder ungültiger Token bzw. falsche Login-Daten
+|`403` |fehlende Rolle oder fremde Mitgliedsdaten
+|`404` |kein Mitglied gefunden
+|`412` |`If-Match` ungültig oder Version veraltet
+|`422` |Validierungsfehler oder Emailadresse existiert bereits
+|`428` |`If-Match` fehlt beim Ändern
+|===
+
+Die OpenAPI-Dokumentation erzeugt FastAPI automatisch unter
+http://127.0.0.1:8000/docs.
+
+=== GraphQL
+
+Die GraphQL-Schnittstelle unter `/graphql` (mit GraphiQL im Browser) bietet:
+
+[source,graphql]
+----
+type Query {
+  mitglied(mitgliedId: ID!): Mitglied          # admin, mitglied (nur eigene Daten)
+  mitglieder(suchparameter: Suchparameter): [Mitglied!]!   # nur admin
+}
+
+type Mutation {
+  create(mitgliedInput: MitgliedInput!): CreatePayload!
+  login(username: String!, password: String!): LoginResult!
+}
+----
+
+Die Eingaben von `create` werden mit demselben Pydantic-Model validiert wie bei REST.
+
+== Abläufe
+
+=== Neues Mitglied anlegen
+
+Für jedes neue Mitglied wird zusätzlich ein Benutzer in Keycloak mit der Rolle
+`mitglied` angelegt. Damit bei einer bereits vergebenen Emailadresse kein überflüssiger
+Benutzer entsteht, wird zuerst die eigene DB geprüft. Schlägt die DB-Transaktion nach
+dem Anlegen in Keycloak trotzdem fehl, wird der Keycloak-Benutzer wieder gelöscht
+(_Kompensation_, da es keine gemeinsame Transaktion über DB und Keycloak gibt).
+Die Mail an die Buchhaltung wird als `BackgroundTask` erst *nach* dem Response
+verschickt, damit der Client nicht auf den Mailserver warten muss.
+
+plantuml::diagramme/sequenz-anlegen.puml[format=svg,target=sequenz-anlegen]
+
+=== Mitglied ändern
+
+Beim Ändern wird *optimistische Synchronisation* verwendet: Der Client schickt die
+gelesene Version im Header `If-Match` mit. Stimmt sie nicht mit der Version in der DB
+überein, hat zwischenzeitlich jemand anderes geändert und der Request scheitert mit
+`412`. So gehen keine Änderungen verloren, ohne dass Datensätze gesperrt werden.
+
+plantuml::diagramme/sequenz-aendern.puml[format=svg,target=sequenz-aendern]
+
+== Security
+
+* *Authentifizierung*: Keycloak stellt nach dem Login einen JWT aus. Der Appserver
+  prüft bei jedem Request die Signatur und liest Benutzername, Email und die
+  Client-Rollen von `fitnessstudio-client` aus dem Token (`TokenService`).
+* *Autorisierung*: `RolesRequired` prüft die Rollen pro Endpunkt. Die Geschäftslogik
+  prüft zusätzlich, ob ein Mitglied nur auf die *eigenen* Daten zugreift; der
+  Vergleich erfolgt über die Emailadresse im Token. Für eine fremde oder nicht
+  vorhandene ID erhält ein Mitglied `403`, damit man nicht herausfinden kann,
+  welche IDs existieren.
+* *Response-Header*: u.a. `Content-Security-Policy`, `X-Content-Type-Options`,
+  `X-Frame-Options` und `Strict-Transport-Security`.
+* *Geheimnisse*: Passwörter und das Client Secret stehen nur in `.env`.
+
+== Validierung
+
+Die Eingaben werden mit Pydantic im Modus `strict` und mit `extra="forbid"` geprüft,
+u.a.:
+
+* Vorname 1 bis 64 Zeichen, Nachname z.B. `Muster` oder `Müller-Lüdenscheidt`
+* gültige Emailadresse (`EmailStr`)
+* Geburtsdatum in der Vergangenheit (`PastDate`)
+* höchstens 20 Interessen mit je 1 bis 32 Zeichen
+* Beitrag mit höchstens 2 Nachkommastellen und nicht negativ, Zahlbetrag positiv
+* Seitengröße bei der Suche zwischen 1 und 100
+
+== Qualitätssicherung
+
+[cols="1,3"]
+|===
+|Werkzeug |Einsatz
+
+|ruff |Codeanalyse mit über 40 Regelgruppen und Formatierung
+|ty |Typprüfung
+|pytest |Unit-Tests mit Mocks (`tests/unit`) und Integrationstests gegen den laufenden Server (`tests/integration`), Testabdeckung mit pytest-cov
+|Bruno |manuelle API-Tests für REST und GraphQL (`extras/bruno`)
+|Locust |Lasttests (`tests/lasttest`)
+|GitHub Actions |bei jedem Push: ruff, Formatierung, ty, Unit-Tests und Bauen des Docker-Images
+|OWASP Dependency Check |bekannte Schwachstellen in den Abhängigkeiten (`extras/dependency-check.py`)
+|===
