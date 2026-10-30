@@ -8,3 +8,7 @@ variables:
     name: clientSecret
   - secret: true
     name: password
+  - name: memberUsername
+    value: alice
+  - name: memberPassword
+    secret: true

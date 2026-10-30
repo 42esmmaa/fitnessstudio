@@ -1,12 +1,11 @@
 info:
-  name: "Suche mit ID Bearer Token"
+  name: Suche mit ID Bearer Token
   type: folder
   seq: 2
-
 request:
   auth:
     type: bearer
-    token: "{{TOKEN}}"
+    token: '{{TOKEN}}'
   scripts:
     - type: before-request
       code: |-

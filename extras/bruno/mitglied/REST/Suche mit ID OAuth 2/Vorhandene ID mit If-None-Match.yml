@@ -1,0 +1,23 @@
+info:
+  name: Vorhandene ID mit If-None-Match
+  type: http
+  seq: 2
+http:
+  method: GET
+  url: '{{restUrl}}/1'
+  auth: inherit
+  headers:
+    - name: If-None-Match
+      value: '{{ETAG_MEMBER_1}}'
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: '304'
+    - expression: res.body
+      operator: isEmpty
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

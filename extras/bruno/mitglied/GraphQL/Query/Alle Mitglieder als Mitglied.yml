@@ -41,7 +41,7 @@ runtime:
         const response = await bru.sendRequest({
           method: 'QUERY',
           url: bru.getCollectionVar('tokenUrl'),
-          data: { username: 'alice', password: bru.getEnvVar('password') },
+          data: { username: 'alice', password: bru.getEnvVar('memberPassword') },
         });
         if (response.status !== 200) throw new Error('Login als alice fehlgeschlagen');
         if (!response.data.rollen.includes('MITGLIED') || response.data.rollen.includes('ADMIN')) {

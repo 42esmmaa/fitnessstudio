@@ -1,0 +1,27 @@
+info:
+  name: Vorhandene Email
+  type: http
+  seq: 3
+http:
+  method: QUERY
+  url: '{{restUrl}}/query'
+  auth: inherit
+  body:
+    type: json
+    data: |-
+      {
+        "email": "alice@fitnessstudio.de"
+      }
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: '200'
+    - expression: res.body.content[0].email
+      operator: eq
+      value: alice@fitnessstudio.de
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

@@ -1,12 +1,11 @@
 info:
-  name: "Suche mit Suchparameter"
+  name: Suche mit Suchparameter
   type: folder
-  seq: 3
-
+  seq: 6
 request:
   auth:
     type: bearer
-    token: "{{TOKEN}}"
+    token: '{{TOKEN}}'
   scripts:
     - type: before-request
       code: |-

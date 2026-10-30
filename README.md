@@ -219,7 +219,22 @@ Die Konfiguration aller Werkzeuge steht in `pyproject.toml`.
 Die Bruno-Collection in `extras/bruno/mitglied` enthält Requests für REST und
 GraphQL: Token holen, Suchen, Neu anlegen, Ändern mit `If-Match`, Löschen sowie
 Fehlerfälle. In Bruno die Collection öffnen, die Umgebung `fitnessstudio` wählen und
-dort die geheimen Variablen `password` und `clientSecret` eintragen.
+dort die geheimen Variablen `password`, `clientSecret` und `memberPassword`
+eintragen. `memberUsername` ist für die Mitgliedsrolle auf `alice` voreingestellt.
+Die direkten HTTPS-Requests an Keycloak verwenden das lokale Zertifikat
+`extras/compose/keycloak/tls/certificate.crt`. Dieses muss für Bruno vertraut sein;
+bei Node-/CLI-Läufen kann es über `NODE_EXTRA_CA_CERTS` eingebunden werden.
+
+Wie in der Dozentenvorlage sind direkte Keycloak-Requests, OAuth-Logins,
+ETag-Abfragen, Pagination und Fehlerfälle enthalten. Die Collection umfasst
+62 Requests. Zwei Requests sind mit `manual` markiert: Authorization Code benötigt
+den Browser-Login in Bruno; `Dev/DB neu laden` setzt die Mitgliedstabellen auf die
+CSV-Testdaten zurück. Bei CLI-Gesamtläufen diese mit `--exclude-tags manual` ausnehmen.
+
+Nicht übernommen sind Requests für nicht vorhandene Endpunkte der Vorlage:
+Prometheus, Health, Shutdown, Profiling und das Neuladen der Keycloak-Benutzer.
+Unbekannte Suchparameter werden bei uns durch Pydantic mit 422 abgelehnt; der
+entsprechende Request erwartet daher 422 statt 404 wie in der Vorlage.
 
 ## Lasttest mit Locust
 

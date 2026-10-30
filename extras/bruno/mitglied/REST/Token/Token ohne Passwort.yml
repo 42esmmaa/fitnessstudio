@@ -1,0 +1,24 @@
+info:
+  name: Token ohne Passwort
+  type: http
+  seq: 4
+http:
+  method: QUERY
+  url: '{{tokenUrl}}'
+  auth: inherit
+  body:
+    type: json
+    data: |-
+      {
+        "username": "{{username}}"
+      }
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: '401'
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

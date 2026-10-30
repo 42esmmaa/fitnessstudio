@@ -1,0 +1,22 @@
+info:
+  name: Nicht-vorhandene Property
+  type: http
+  seq: 6
+http:
+  method: GET
+  url: '{{restUrl}}?foo=true'
+  auth: inherit
+  params:
+    - name: foo
+      value: 'true'
+      type: query
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: '422'
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

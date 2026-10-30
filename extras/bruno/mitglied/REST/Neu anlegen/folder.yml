@@ -1,7 +1,6 @@
 info:
-  name: "Neu anlegen"
+  name: Neu anlegen
   type: folder
-  seq: 5
-
+  seq: 8
 request:
   auth: inherit

@@ -1,0 +1,29 @@
+info:
+  name: Suche mit ID OAuth 2 Authorization Code
+  type: folder
+  seq: 5
+  tags:
+    - manual
+request:
+  auth:
+    type: oauth2
+    flow: authorization_code
+    authorizationUrl: '{{oidcAuthUrl}}'
+    accessTokenUrl: '{{oidcTokenUrl}}'
+    callbackUrl: '{{baseUrl}}'
+    credentials:
+      clientId: '{{clientId}}'
+      clientSecret: '{{clientSecret}}'
+      placement: body
+    pkce:
+      disabled: true
+    tokenConfig:
+      id: authorization-code
+      placement:
+        header: Bearer
+    settings:
+      autoFetchToken: true
+      autoRefreshToken: false
+docs:
+  content: 'Manuell in Bruno: Browser-Login über Get Access Token starten. Danach den Request ausführen.'
+  type: text/markdown

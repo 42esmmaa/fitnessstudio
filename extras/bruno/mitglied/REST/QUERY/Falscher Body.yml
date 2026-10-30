@@ -1,0 +1,24 @@
+info:
+  name: Falscher Body
+  type: http
+  seq: 6
+http:
+  method: QUERY
+  url: '{{restUrl}}/query'
+  auth: inherit
+  body:
+    type: json
+    data: |-
+      {
+        "foo": true
+      }
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: '422'
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5

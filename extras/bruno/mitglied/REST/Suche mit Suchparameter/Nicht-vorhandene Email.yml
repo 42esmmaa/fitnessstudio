@@ -1,0 +1,22 @@
+info:
+  name: Nicht-vorhandene Email
+  type: http
+  seq: 5
+http:
+  method: GET
+  url: '{{restUrl}}?email=nichtvorhanden@example.org'
+  auth: inherit
+  params:
+    - name: email
+      value: nichtvorhanden@example.org
+      type: query
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: '404'
+settings:
+  encodeUrl: true
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5
